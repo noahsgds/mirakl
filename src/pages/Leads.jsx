@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Search, ChevronLeft, ChevronRight, ExternalLink, Filter, X } from 'lucide-react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { Search, ChevronLeft, ChevronRight, ExternalLink, Filter, X, Download, Upload, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
@@ -37,6 +37,9 @@ export default function Leads() {
     search: '',
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+  const fileInputRef = useRef(null)
 
   const loadLeads = useCallback(async () => {
     setLoading(true)
@@ -71,6 +74,17 @@ export default function Leads() {
 
   useEffect(() => { loadLeads() }, [loadLeads])
 
+  /* Realtime auto-refresh */
+  useEffect(() => {
+    const channel = supabase
+      .channel('leads-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'seller_qualification' }, () => {
+        loadLeads()
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [loadLeads])
+
   function toggleStatus(s) {
     setFilters((f) => ({
       ...f,
@@ -88,6 +102,85 @@ export default function Leads() {
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
+  /* ---- CSV Export ---- */
+  async function handleExport() {
+    const { data } = await supabase
+      .from('seller_qualification')
+      .select('seller_id, statut, score_total, recommandation, contexte_detecte, decision_maker_name, decision_maker_email, decision_maker_title, decision_maker_linkedin, enriched_at, ab_variant, error_reason, amazon_sellers(seller_name, seller_url, categories, nb_products, rating, nb_reviews, avg_price)')
+      .order('enriched_at', { ascending: false })
+    if (!data) return
+
+    const cols = ['seller_name', 'seller_url', 'categories', 'nb_products', 'rating', 'statut', 'score_total', 'recommandation', 'contexte_detecte', 'decision_maker_name', 'decision_maker_email', 'decision_maker_title', 'decision_maker_linkedin', 'enriched_at', 'ab_variant', 'error_reason']
+    const header = cols.join(',')
+    const esc = (v) => (v == null ? '' : `"${String(v).replace(/"/g, '""')}"`)
+    const rows = data.map((r) => [
+      esc(r.amazon_sellers?.seller_name), esc(r.amazon_sellers?.seller_url), esc(r.amazon_sellers?.categories),
+      esc(r.amazon_sellers?.nb_products), esc(r.amazon_sellers?.rating),
+      esc(r.statut), esc(r.score_total), esc(r.recommandation), esc(r.contexte_detecte),
+      esc(r.decision_maker_name), esc(r.decision_maker_email), esc(r.decision_maker_title), esc(r.decision_maker_linkedin),
+      esc(r.enriched_at), esc(r.ab_variant), esc(r.error_reason),
+    ].join(','))
+
+    const csv = [header, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mirakl-leads-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  /* ---- CSV Import ---- */
+  async function handleImport(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportResult(null)
+
+    const text = await file.text()
+    const lines = text.split('\n').filter(Boolean)
+    const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
+
+    const parse = (line) => {
+      const vals = []
+      let cur = '', inQ = false
+      for (const ch of line) {
+        if (ch === '"') { inQ = !inQ }
+        else if (ch === ',' && !inQ) { vals.push(cur); cur = '' }
+        else cur += ch
+      }
+      vals.push(cur)
+      return vals.map((v) => v.trim().replace(/^"|"$/g, '') || null)
+    }
+
+    const records = lines.slice(1).map((line) => {
+      const vals = parse(line)
+      return headers.reduce((acc, h, i) => ({ ...acc, [h]: vals[i] }), {})
+    })
+
+    let inserted = 0, errors = 0
+    for (const r of records) {
+      if (!r.seller_name) continue
+      const { error } = await supabase.from('amazon_sellers').upsert({
+        seller_name: r.seller_name,
+        seller_url: r.seller_url || null,
+        categories: r.categories || null,
+        nb_products: r.nb_products ? parseInt(r.nb_products) : null,
+        rating: r.rating ? parseFloat(r.rating) : null,
+        nb_reviews: r.nb_reviews ? parseInt(r.nb_reviews) : null,
+        avg_price: r.avg_price ? parseFloat(r.avg_price) : null,
+      }, { onConflict: 'seller_id', ignoreDuplicates: false })
+      if (error) errors++
+      else inserted++
+    }
+
+    setImportResult({ inserted, errors })
+    setImporting(false)
+    e.target.value = ''
+    loadLeads()
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -95,11 +188,11 @@ export default function Leads() {
           <h1 className="text-2xl font-bold text-text">Leads</h1>
           <p className="text-muted text-sm mt-0.5">{total.toLocaleString()} leads au total</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
-              className="input pl-9 w-56"
+              className="input pl-9 w-48"
               placeholder="Rechercher..."
               value={filters.search}
               onChange={(e) => { setFilters((f) => ({ ...f, search: e.target.value })); setPage(0) }}
@@ -118,8 +211,36 @@ export default function Leads() {
               <X size={16} />
             </button>
           )}
+          <div className="flex items-center gap-1 ml-1">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-text hover:bg-gray-50 transition-colors"
+              title="Exporter en CSV"
+            >
+              <Download size={15} />
+              Export CSV
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-text hover:bg-gray-50 transition-colors disabled:opacity-50"
+              title="Importer des leads (CSV)"
+            >
+              {importing ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />}
+              Import CSV
+            </button>
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+          </div>
         </div>
       </div>
+
+      {importResult && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm border ${importResult.errors === 0 ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+          <CheckCircle2 size={15} />
+          Import terminé — {importResult.inserted} ligne(s) importée(s){importResult.errors > 0 ? `, ${importResult.errors} erreur(s)` : ''}
+          <button onClick={() => setImportResult(null)} className="ml-auto"><X size={14} /></button>
+        </div>
+      )}
 
       {showFilters && (
         <div className="card p-4 space-y-4">
