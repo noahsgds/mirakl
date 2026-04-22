@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+output/
+*.csv
+.venv/
+.env
+.env.*
+.DS_Store
+README.md
+.env.example
