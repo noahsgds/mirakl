@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Users, Flame, MessageSquare, TrendingUp, Clock, Mail, Zap } from 'lucide-react'
+import { Users, Flame, MessageSquare, TrendingUp, Clock, Mail, Zap, Layers } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import KPICard from '../components/KPICard'
 import FunnelChart from '../components/FunnelChart'
 import StatusBadge from '../components/StatusBadge'
+import { CATEGORIES, getCategory } from '../lib/categories'
 
 function fmt(ts) {
   if (!ts) return '—'
@@ -12,20 +13,30 @@ function fmt(ts) {
 
 export default function Home() {
   const [counts, setCounts] = useState({})
+  const [categoryCounts, setCategoryCounts] = useState({})
   const [recentEnriched, setRecentEnriched] = useState([])
   const [recentEmails, setRecentEmails] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [{ data: qualData }, { data: seqData }] = await Promise.all([
+      const [{ data: qualData }, { data: seqData }, { data: sellersData }] = await Promise.all([
         supabase.from('seller_qualification').select('statut, enriched_at, seller_id'),
         supabase
           .from('seller_sequence')
           .select('seller_id, mail1_sent_at, statut_sequence')
           .order('mail1_sent_at', { ascending: false })
           .limit(5),
+        supabase.from('amazon_sellers').select('category'),
       ])
+
+      // Category breakdown
+      const catMap = (sellersData || []).reduce((acc, r) => {
+        const k = r.category || 'mode'
+        acc[k] = (acc[k] || 0) + 1
+        return acc
+      }, {})
+      setCategoryCounts(catMap)
 
       const grouped = (qualData || []).reduce((acc, r) => {
         acc[r.statut || 'null'] = (acc[r.statut || 'null'] || 0) + 1
@@ -65,7 +76,9 @@ export default function Home() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text">Dashboard</h1>
-        <p className="text-muted text-sm mt-1">Vue d'ensemble de la campagne Amazon FR → Zalando</p>
+        <p className="text-muted text-sm mt-1">
+          Amazon FR → 8 catégories × {CATEGORIES.reduce((n, c) => n + c.marketplaces.length, 0)} marketplaces partenaires
+        </p>
       </div>
 
       {/* KPI Cards */}
@@ -117,6 +130,29 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Catégories breakdown */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <Layers size={18} className="text-[#1B3A5C]" />
+          <h2 className="font-semibold text-text">Sellers par catégorie</h2>
+          <span className="ml-auto text-xs text-muted">
+            Total : {Object.values(categoryCounts).reduce((a, b) => a + b, 0)}
+          </span>
+        </div>
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
+          {CATEGORIES.map((c) => {
+            const n = categoryCounts[c.key] || 0
+            return (
+              <div key={c.key} className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-2xl mb-1">{c.emoji}</div>
+                <p className="text-xs font-medium text-text">{c.label}</p>
+                <p className="text-lg font-bold text-[#1B3A5C] mt-1">{n}</p>
+              </div>
+            )
+          })}
         </div>
       </div>
 

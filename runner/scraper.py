@@ -35,34 +35,148 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 AMAZON_IDS = {"A13V1IB3VIYZZH", "ATVPDKIKX0DER", "A2NODRKZP88ZB9", "A2W68NJA5YNXUP"}
 
-SEARCH_QUERIES = [
-    # Femme — vêtements
-    "robe femme", "robe soirée femme", "robe été femme", "robe pull femme",
-    "jean femme", "jean femme slim", "jean femme taille haute",
-    "veste femme", "veste cuir femme", "blazer femme", "manteau femme",
-    "pull femme", "pull col roulé femme", "gilet femme", "cardigan femme",
-    "t-shirt femme", "chemisier femme", "top femme",
-    "short femme été", "jupe femme", "jupe midi femme", "combinaison femme",
-    "lingerie femme", "pyjama femme",
-    # Femme — accessoires
-    "chaussures femme", "bottines femme", "baskets femme", "escarpins femme",
-    "sac à main femme", "sac bandoulière femme", "sac cabas femme",
-    "bijoux fantaisie femme", "collier femme", "boucles oreilles femme",
-    "montre femme", "ceinture femme", "écharpe femme", "lunettes soleil femme",
-    # Homme — vêtements
-    "jean homme", "jean homme slim", "pantalon homme", "chino homme",
-    "veste homme", "blouson homme", "manteau homme", "parka homme",
-    "chemise homme", "polo homme", "t-shirt homme", "pull homme",
-    "sweat homme", "hoodie homme", "short homme",
-    # Homme — accessoires
-    "chaussures homme", "sneakers homme", "baskets homme", "bottines homme",
-    "montre homme", "ceinture homme", "portefeuille homme", "lunettes soleil homme",
-    # Sport / outdoor
-    "running homme", "running femme", "tennis homme", "fitness femme",
-    "legging sport femme", "maillot bain femme", "maillot bain homme",
-    # Luxe / lifestyle
-    "montre luxe", "sac cuir femme", "foulard soie", "parfum femme", "parfum homme",
-]
+# ─────────────────────────────────────────────────────────────────────────────
+# Queries par catégorie — pilier #1 de la qualité de classification.
+# Chaque query est choisie pour maximiser la densité de sellers réellement
+# dans la catégorie (ex: "robe femme" → 95%+ de sellers mode).
+# ─────────────────────────────────────────────────────────────────────────────
+
+SEARCH_QUERIES_BY_CATEGORY: dict[str, list[str]] = {
+    "mode": [
+        # Femme — vêtements
+        "robe femme", "robe soirée femme", "robe été femme", "robe pull femme",
+        "jean femme", "jean femme slim", "jean femme taille haute",
+        "veste femme", "veste cuir femme", "blazer femme", "manteau femme",
+        "pull femme", "pull col roulé femme", "gilet femme", "cardigan femme",
+        "t-shirt femme", "chemisier femme", "top femme",
+        "short femme été", "jupe femme", "jupe midi femme", "combinaison femme",
+        "lingerie femme", "pyjama femme", "maillot bain femme",
+        # Femme — accessoires
+        "chaussures femme", "bottines femme", "baskets femme", "escarpins femme",
+        "sac à main femme", "sac bandoulière femme", "sac cabas femme",
+        "bijoux fantaisie femme", "collier femme", "boucles oreilles femme",
+        "montre femme", "ceinture femme", "écharpe femme", "lunettes soleil femme",
+        # Homme
+        "jean homme", "jean homme slim", "pantalon homme", "chino homme",
+        "veste homme", "blouson homme", "manteau homme", "parka homme",
+        "chemise homme", "polo homme", "t-shirt homme", "pull homme",
+        "sweat homme", "hoodie homme", "short homme",
+        "chaussures homme", "sneakers homme", "baskets homme", "bottines homme",
+        "montre homme", "ceinture homme", "portefeuille homme",
+        # Luxe
+        "montre luxe", "sac cuir femme", "foulard soie",
+    ],
+    "beaute": [
+        "parfum femme", "parfum homme", "eau de toilette femme", "eau de parfum",
+        "crème visage anti-age", "sérum visage", "crème hydratante visage",
+        "rouge à lèvres", "rouge à lèvres mat", "fond de teint", "mascara",
+        "mascara waterproof", "eye-liner", "fard à paupières", "palette maquillage",
+        "vernis à ongles", "gel douche", "shampooing cheveux", "après-shampooing",
+        "masque cheveux", "huile cheveux", "huile essentielle",
+        "crème solaire visage", "baume à lèvres", "déodorant femme", "déodorant homme",
+        "gommage visage", "masque visage", "soin contour des yeux", "crème mains",
+        "brosse à dents électrique", "tondeuse barbe", "rasoir électrique",
+    ],
+    "maison": [
+        "housse de couette", "parure de lit", "linge de lit coton",
+        "coussin décoratif", "plaid canapé", "rideau occultant", "voilage",
+        "lampe salon", "lampe de chevet", "luminaire plafond", "suspension luminaire",
+        "vase décoratif", "bougie parfumée", "diffuseur parfum maison",
+        "tapis salon", "tapis chambre", "tableau décoration mural", "miroir mural",
+        "horloge murale", "cadre photo", "étagère murale",
+        "serviette bain", "peignoir", "tapis de bain",
+        "vaisselle", "assiette design", "verre à vin", "couteau cuisine",
+        "casserole inox", "poêle anti-adhésive", "rangement cuisine",
+    ],
+    "sport": [
+        "tapis yoga", "bloc yoga", "haltères", "kettlebell",
+        "vélo appartement", "tapis de course", "rameur",
+        "protéine whey", "barre protéinée", "shaker proteine",
+        "short running homme", "short running femme", "legging sport femme",
+        "chaussures running homme", "chaussures running femme",
+        "ballon football", "ballon basket", "raquette tennis", "raquette padel",
+        "sac de sport", "montre connectée sport", "gourde sport", "corde à sauter",
+        "gant musculation", "ceinture musculation", "élastique fitness",
+        "bâtons randonnée", "chaussures trail", "sac à dos randonnée",
+    ],
+    "enfant": [
+        "jouet bébé éveil", "hochet bébé", "peluche géante", "peluche bébé",
+        "poussette", "siège auto bébé", "chaise haute bébé",
+        "lego technic", "lego friends", "lego duplo", "playmobil",
+        "puzzle enfant 100 pièces", "jeu de société enfant", "jeu société famille",
+        "livre enfant 3 ans", "livre enfant 5 ans",
+        "couches bébé", "biberon", "tétine bébé", "gigoteuse bébé",
+        "vêtement bébé fille", "vêtement bébé garçon",
+        "trottinette enfant", "vélo enfant 6 ans", "draisienne bébé",
+        "table à langer", "parc bébé", "tapis éveil bébé",
+    ],
+    "electronique": [
+        "écouteurs bluetooth", "écouteurs sans fil", "casque audio bluetooth",
+        "chargeur iphone", "chargeur usb-c", "câble usb c", "câble hdmi",
+        "enceinte bluetooth portable", "enceinte bluetooth douche",
+        "clavier sans fil", "souris gaming", "tapis souris gaming",
+        "webcam ordinateur", "disque dur externe 1to", "ssd externe",
+        "batterie externe", "batterie externe 20000mah",
+        "support téléphone voiture", "chargeur voiture", "dashcam voiture",
+        "casque gaming", "manette ps5", "manette xbox", "manette switch",
+        "tablette graphique", "imprimante jet encre", "cartouche imprimante",
+        "ampoule connectée", "prise connectée", "caméra surveillance",
+    ],
+    "culture": [
+        "livre roman 2024", "livre best seller", "livre développement personnel",
+        "livre cuisine", "livre recettes",
+        "bande dessinée", "manga one piece", "manga naruto", "manga berserk",
+        "cd musique", "vinyle", "vinyle rock", "vinyle jazz",
+        "jeu ps5", "jeu switch", "jeu xbox series x",
+        "puzzle adulte 1000 pièces", "puzzle ravensburger",
+        "jeu de société stratégie", "jeu cartes uno",
+        "carnet moleskine", "stylo plume", "agenda 2026",
+    ],
+    "bricolage": [
+        "perceuse visseuse sans fil", "perceuse percussion",
+        "visseuse à choc", "ponceuse excentrique", "meuleuse",
+        "tournevis torx", "jeu de tournevis", "clé à molette",
+        "marteau charpentier", "boîte à outils complète", "servante atelier",
+        "pinceau peinture", "rouleau peinture", "peinture murale blanche",
+        "vis bois", "chevilles murales", "ruban adhésif toilé",
+        "cutter professionnel", "mètre ruban", "niveau à bulle",
+        "échelle télescopique", "escabeau", "multimètre",
+        "tuyau arrosage", "sécateur", "tondeuse gazon électrique",
+        "bâche de protection", "gants de travail",
+    ],
+}
+
+# Liste plate "tout" si l'utilisateur passe --category all
+SEARCH_QUERIES_ALL = [q for qs in SEARCH_QUERIES_BY_CATEGORY.values() for q in qs]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Marketplaces cibles par catégorie (alignées sur src/lib/categories.js)
+# ─────────────────────────────────────────────────────────────────────────────
+
+TARGET_MARKETPLACES_BY_CATEGORY: dict[str, list[str]] = {
+    "mode":        ["zalando", "galeries_lafayette", "la_redoute", "asos"],
+    "beaute":      ["sephora", "nocibe", "marionnaud", "douglas"],
+    "maison":      ["maisons_du_monde", "la_redoute_interieurs", "conforama", "but"],
+    "sport":       ["decathlon", "go_sport", "intersport", "nike_direct"],
+    "enfant":      ["oxybul", "king_jouet", "joueclub", "la_grande_recre"],
+    "electronique":["fnac", "boulanger", "darty", "cdiscount"],
+    "culture":     ["fnac", "cultura", "gibert", "decitre"],
+    "bricolage":   ["leroy_merlin", "castorama", "mr_bricolage", "manomano"],
+}
+
+# Check "présence marketplace" : on check 1 marketplace primaire par catégorie
+# (URL de recherche qui contient le nom du seller si il y a un hit)
+PRIMARY_MARKETPLACE_CHECK: dict[str, tuple[str, str]] = {
+    "mode":        ("zalando",          "https://www.zalando.fr/recherche/?q={q}"),
+    "beaute":      ("sephora",          "https://www.sephora.fr/search?q={q}"),
+    "maison":      ("maisons_du_monde", "https://www.maisonsdumonde.com/FR/fr/search?text={q}"),
+    "sport":       ("decathlon",        "https://www.decathlon.fr/search?Ntt={q}"),
+    "enfant":      ("oxybul",           "https://www.oxybul.com/search?text={q}"),
+    "electronique":("fnac",             "https://www.fnac.com/SearchResult/ResultList.aspx?Search={q}"),
+    "culture":     ("fnac",             "https://www.fnac.com/SearchResult/ResultList.aspx?Search={q}"),
+    "bricolage":   ("leroy_merlin",     "https://www.leroymerlin.fr/v3/search/search.do?keyword={q}"),
+}
+
 
 FILTER_MIN_RATING  = 4.0   # ignorer si note connue < 4.0
 FILTER_MIN_PRODUCTS = 10   # ignorer si catalogue < 10 produits
@@ -77,7 +191,11 @@ class Seller:
     amazon_seller_id:    str   = ""
     seller_name:         str   = ""
     seller_url:          str   = ""
-    categories:          str   = ""
+    categories:          str   = ""       # libre (tags détectés sur Amazon)
+    category:            str   = "mode"   # catégorie primaire (key ∈ SEARCH_QUERIES_BY_CATEGORY)
+    secondary_categories: list = None     # autres catégories où on l'a croisé
+    target_marketplaces: list  = None     # marketplaces Mirakl cibles
+    present_marketplaces: list = None     # marketplaces où le seller vend déjà
     nb_products:         int   = 0
     rating:              float = 0.0
     nb_reviews:          int   = 0          # total lifetime ratings
@@ -90,13 +208,23 @@ class Seller:
     years_on_amazon:     int   = 0
     member_since:        str   = ""
     response_time:       str   = ""
-    on_zalando:          bool  = False
+    on_zalando:          bool  = False    # rétro-compat (mode uniquement)
     zalando_url:         str   = ""
     min_price:           float = 0.0
     max_price:           float = 0.0
     top_brands:          str   = ""       # marques vendues (top 5)
     is_fba:              bool  = False    # Expédié par Amazon
     has_own_website:     bool  = False
+
+    def __post_init__(self):
+        if self.secondary_categories is None:
+            self.secondary_categories = [self.category] if self.category else []
+        if self.target_marketplaces is None:
+            self.target_marketplaces = list(
+                TARGET_MARKETPLACES_BY_CATEGORY.get(self.category, [])
+            )
+        if self.present_marketplaces is None:
+            self.present_marketplaces = []
 
     def to_row(self) -> dict:
         return {
@@ -105,6 +233,10 @@ class Seller:
             "seller_name":           self.seller_name,
             "seller_url":            self.seller_url,
             "categories":            self.categories,
+            "category":              self.category,
+            "secondary_categories":  self.secondary_categories or [self.category],
+            "target_marketplaces":   self.target_marketplaces or [],
+            "present_marketplaces":  self.present_marketplaces or [],
             "country":               self.country or None,
             "seller_language":       self.seller_language,
             "business_name":         self.business_name or None,
@@ -118,7 +250,7 @@ class Seller:
             "years_on_amazon":       self.years_on_amazon or None,
             "member_since":          self.member_since or None,
             "response_time":         self.response_time or None,
-            # ── Présence Zalando ──────────────────────────────────
+            # ── Présence Zalando (rétro-compat pour mode) ────────
             "on_zalando":            self.on_zalando,
             "zalando_url":           self.zalando_url or None,
             "company_website":       self.zalando_url if self.on_zalando else None,
@@ -133,10 +265,12 @@ class Seller:
             "enriched":  False,
             # ── Détails bruts (pour Dust/N8N) ─────────────────────
             "criteres_detail": {
-                "amazon_seller_id": self.amazon_seller_id,
-                "business_name":    self.business_name,
-                "on_zalando":       self.on_zalando,
-                "scrape_date":      datetime.now().strftime("%Y-%m-%d"),
+                "amazon_seller_id":     self.amazon_seller_id,
+                "business_name":        self.business_name,
+                "category":             self.category,
+                "target_marketplaces":  self.target_marketplaces,
+                "present_marketplaces": self.present_marketplaces,
+                "scrape_date":          datetime.now().strftime("%Y-%m-%d"),
             },
         }
 
@@ -190,25 +324,45 @@ def detect_language(country: str, business_name: str, seller_name: str) -> str:
     return "en"
 
 
-def check_zalando(seller_name: str) -> tuple[bool, str]:
-    """HTTP direct — pas de browser. Retourne (on_zalando, url)."""
+def check_marketplace_presence(seller_name: str, category: str) -> tuple[list[str], str, str]:
+    """
+    Check HTTP direct si le seller vend déjà sur le marketplace primaire
+    de sa catégorie. Retourne (present_marketplaces_list, url_trouvée, nom_marketplace).
+
+    Stratégie : on cherche le nom du seller dans la page de recherche du marketplace.
+    Si le nom apparaît (normalisé), on considère qu'il y a présence.
+    """
     if not seller_name or len(seller_name) < 3:
-        return False, ""
+        return [], "", ""
     # Ignore les noms qui sont juste des IDs Amazon
     if re.fullmatch(r'[A-Z0-9]{10,20}', seller_name):
-        return False, ""
+        return [], "", ""
+
+    primary = PRIMARY_MARKETPLACE_CHECK.get(category)
+    if not primary:
+        return [], "", ""
+    mp_key, url_template = primary
+
     try:
-        url = f"https://www.zalando.fr/recherche/?q={seller_name.replace(' ', '+')}&cat=women-clothing"
+        url = url_template.format(q=seller_name.replace(' ', '+'))
         r = http_requests.get(url, timeout=8, headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/120.0 Safari/537.36"
         })
         if r.status_code == 200:
             clean = re.sub(r'[^a-z0-9]', '', seller_name.lower())
-            if clean and clean in re.sub(r'[^a-z0-9]', '', r.text.lower()):
-                return True, url
+            if clean and len(clean) >= 4 and clean in re.sub(r'[^a-z0-9]', '', r.text.lower()):
+                return [mp_key], url, mp_key
     except Exception:
         pass
-    return False, ""
+    return [], "", ""
+
+
+def check_zalando(seller_name: str) -> tuple[bool, str]:
+    """Shim de rétro-compat pour category=mode."""
+    present, url, _ = check_marketplace_presence(seller_name, "mode")
+    return ("zalando" in present), url
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -324,11 +478,12 @@ def get_sellers_from_offers(driver, asin: str) -> list[tuple[str, str]]:
 # Phase C — Enrichissement via /sp?seller=ID
 # ─────────────────────────────────────────────────────────────────────────────
 
-def enrich(driver, seller_id: str, raw_name: str) -> "Seller":
+def enrich(driver, seller_id: str, raw_name: str, category: str = "mode") -> "Seller":
     s = Seller(
         amazon_seller_id=seller_id,
         seller_name=raw_name,
         seller_url=f"https://www.amazon.fr/sp?seller={seller_id}",
+        category=category,
     )
 
     # ── Page profil vendeur (/sp?seller=ID) ──────────────────────────────────
@@ -472,9 +627,13 @@ def enrich(driver, seller_id: str, raw_name: str) -> "Seller":
         if "expédié par amazon" in text2.lower() or "fulfilled by amazon" in text2.lower():
             s.is_fba = True
 
-    # ── Langue & Zalando (HTTP direct) ───────────────────────────────────────
+    # ── Langue & présence marketplace (HTTP direct) ──────────────────────────
     s.seller_language = detect_language(s.country, s.business_name, s.seller_name)
-    s.on_zalando, s.zalando_url = check_zalando(s.seller_name)
+    present, mp_url, _ = check_marketplace_presence(s.seller_name, s.category)
+    s.present_marketplaces = present
+    if s.category == "mode":
+        s.on_zalando = ("zalando" in present)
+        s.zalando_url = mp_url if s.on_zalando else ""
 
     return s
 
@@ -585,7 +744,8 @@ def log(msg: str):
 
 
 def phase_b_worker(worker_id: int, asin_queue: list, candidates: dict,
-                   existing_ids: set, cand_goal: int, stop_flag: list):
+                   existing_ids: set, cand_goal: int, stop_flag: list,
+                   category: str = "mode"):
     """Un worker Phase B pioche des ASINs, extrait les sellers tiers."""
     driver = make_driver()
     try:
@@ -625,7 +785,8 @@ def phase_b_worker(worker_id: int, asin_queue: list, candidates: dict,
             pass
 
 
-def enrich_worker(worker_id: int, job_queue: list, out: dict, target: int, stop_flag: list):
+def enrich_worker(worker_id: int, job_queue: list, out: dict, target: int, stop_flag: list,
+                  category: str = "mode"):
     """Un worker = un Chrome. Pioche dans job_queue tant que stop_flag[0] == False."""
     driver = make_driver()
     try:
@@ -641,11 +802,11 @@ def enrich_worker(worker_id: int, job_queue: list, out: dict, target: int, stop_
                     continue
             log(f"  [W{worker_id}] Enrich: {raw_name[:35]} ({sid})")
             try:
-                s = enrich(driver, sid, raw_name)
+                s = enrich(driver, sid, raw_name, category=category)
             except (NoSuchWindowException, WebDriverException):
                 driver = restart_driver(driver)
                 try:
-                    s = enrich(driver, sid, raw_name)
+                    s = enrich(driver, sid, raw_name, category=category)
                 except Exception:
                     continue
             if s.rating > 0 and s.rating < FILTER_MIN_RATING:
@@ -676,10 +837,25 @@ def enrich_worker(worker_id: int, job_queue: list, out: dict, target: int, stop_
 # Main run
 # ─────────────────────────────────────────────────────────────────────────────
 
-def run(target: int = 20, parallel: int = 1, skip_existing: bool = True):
+def run(target: int = 20, parallel: int = 1, skip_existing: bool = True,
+        category: str = "mode"):
+    # Résout la liste de queries depuis la catégorie
+    if category == "all":
+        queries = SEARCH_QUERIES_ALL
+    elif category in SEARCH_QUERIES_BY_CATEGORY:
+        queries = SEARCH_QUERIES_BY_CATEGORY[category]
+    else:
+        raise ValueError(
+            f"Catégorie inconnue: '{category}'. "
+            f"Valides: {list(SEARCH_QUERIES_BY_CATEGORY.keys()) + ['all']}"
+        )
+
+    marketplaces = TARGET_MARKETPLACES_BY_CATEGORY.get(category, [])
     print(f"\n{'='*60}")
-    print(f"Amazon FR Seller Scraper v4")
-    print(f"Target: {target} vendeurs qualifiés | parallel={parallel} | skip_existing={skip_existing}")
+    print(f"Amazon FR Seller Scraper v5 — Multi-catégories")
+    print(f"Catégorie:    {category}  ({len(queries)} queries)")
+    print(f"Marketplaces: {', '.join(marketplaces) if marketplaces else '(toutes)'}")
+    print(f"Target: {target} sellers | parallel={parallel} | skip_existing={skip_existing}")
     print(f"{'='*60}\n")
 
     existing_ids: set[str] = set()
@@ -707,7 +883,7 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True):
         asin_goal = max(target * 5, 200)
         # Pour >200 sellers, on pagine chaque query pour multiplier les ASINs
         pages_per_query = 3 if target >= 200 else 1
-        for query in SEARCH_QUERIES:
+        for query in queries:
             if len(asin_queue) >= asin_goal:
                 break
             print(f"  Search: '{query}' (pages={pages_per_query})")
@@ -741,7 +917,7 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True):
             with ThreadPoolExecutor(max_workers=parallel) as pool:
                 futs = [
                     pool.submit(phase_b_worker, wid, asin_queue, candidates,
-                                existing_ids, cand_goal, stop_b)
+                                existing_ids, cand_goal, stop_b, category)
                     for wid in range(parallel)
                 ]
                 for f in as_completed(futs):
@@ -786,7 +962,7 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True):
             stop_flag = [False]
             with ThreadPoolExecutor(max_workers=parallel) as pool:
                 futures = [
-                    pool.submit(enrich_worker, wid, jobs, sellers, target, stop_flag)
+                    pool.submit(enrich_worker, wid, jobs, sellers, target, stop_flag, category)
                     for wid in range(parallel)
                 ]
                 # Sauvegarde intermédiaire périodique
@@ -806,11 +982,11 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True):
                 seen_ids.add(sid)
                 print(f"  Enrich: {raw_name[:40]} ({sid})")
                 try:
-                    s = enrich(driver, sid, raw_name)
+                    s = enrich(driver, sid, raw_name, category=category)
                 except (NoSuchWindowException, WebDriverException):
                     driver = restart_driver(driver)
                     try:
-                        s = enrich(driver, sid, raw_name)
+                        s = enrich(driver, sid, raw_name, category=category)
                     except Exception:
                         continue
 
@@ -874,5 +1050,11 @@ if __name__ == "__main__":
                    help="Nombre d'instances Chrome pour Phase B + C (recommandé: 4 pour 1000 sellers)")
     p.add_argument("--no-dedup", action="store_true",
                    help="Ne pas filtrer les sellers déjà en base Supabase")
+    p.add_argument("--category",
+                   choices=list(SEARCH_QUERIES_BY_CATEGORY.keys()) + ["all"],
+                   default="mode",
+                   help="Catégorie à scraper (mode, beaute, maison, sport, "
+                        "enfant, electronique, culture, bricolage, all)")
     args = p.parse_args()
-    run(target=args.count, parallel=args.parallel, skip_existing=not args.no_dedup)
+    run(target=args.count, parallel=args.parallel,
+        skip_existing=not args.no_dedup, category=args.category)

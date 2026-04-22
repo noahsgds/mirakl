@@ -88,16 +88,27 @@ def count_sellers() -> int:
     return 0
 
 
+VALID_CATEGORIES = {
+    "mode", "beaute", "maison", "sport",
+    "enfant", "electronique", "culture", "bricolage", "all",
+}
+
+
 def run_scraper(job: dict) -> tuple[int, str]:
     """Lance scraper.py. Retourne (sellers_scraped, error_message)."""
     count = int(job.get("target_count") or 20)
     parallel = int(job.get("parallel") or 1)
     skip_existing = bool(job.get("skip_existing", True))
+    category = (job.get("category") or "mode").lower()
+    if category not in VALID_CATEGORIES:
+        log(f"  ⚠️  Catégorie inconnue '{category}', fallback 'mode'")
+        category = "mode"
 
     cmd = [
         sys.executable, "-u", SCRAPER_PATH,
         "--count", str(count),
         "--parallel", str(parallel),
+        "--category", category,
     ]
     if not skip_existing:
         cmd.append("--no-dedup")
@@ -131,7 +142,8 @@ def run_scraper(job: dict) -> tuple[int, str]:
 
 def handle_job(job: dict):
     jid = job["id"]
-    log(f"▶ Job {jid} | target={job['target_count']} parallel={job['parallel']}")
+    log(f"▶ Job {jid} | category={job.get('category', 'mode')} "
+        f"target={job['target_count']} parallel={job['parallel']}")
 
     # Lock: passer en running
     update_job(jid, {

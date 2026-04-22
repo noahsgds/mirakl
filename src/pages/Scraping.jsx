@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Bot,
   Play,
@@ -13,8 +13,11 @@ import {
   Terminal,
   Copy,
   CheckCheck,
+  Target,
+  Zap,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { CATEGORIES, getCategory, categoryLabel } from '../lib/categories'
 
 function fmtDate(ts) {
   if (!ts) return '—'
@@ -44,6 +47,20 @@ function StatusPill({ status }) {
   )
 }
 
+function CategoryBadge({ categoryKey, size = 'sm' }) {
+  const cat = getCategory(categoryKey)
+  const px = size === 'sm' ? 'px-2 py-0.5' : 'px-2.5 py-1'
+  const txt = size === 'sm' ? 'text-[11px]' : 'text-xs'
+  return (
+    <span
+      className={`inline-flex items-center gap-1 ${px} rounded-full font-semibold bg-gray-100 text-gray-700 ${txt}`}
+    >
+      <span>{cat.emoji}</span>
+      <span>{cat.label}</span>
+    </span>
+  )
+}
+
 function Stat({ icon: Icon, label, value, sub, color = '#1B3A5C' }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
@@ -65,10 +82,16 @@ function Stat({ icon: Icon, label, value, sub, color = '#1B3A5C' }) {
 export default function Scraping() {
   const [sellerStats, setSellerStats] = useState({ total: 0, today: 0, lastAt: null })
   const [countries, setCountries] = useState([])
+  const [categoryCounts, setCategoryCounts] = useState({})
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [launching, setLaunching] = useState(false)
-  const [form, setForm] = useState({ target_count: 1000, parallel: 4, skip_existing: true })
+  const [form, setForm] = useState({
+    category: 'mode',
+    target_count: 500,
+    parallel: 4,
+    skip_existing: true,
+  })
   const [toast, setToast] = useState(null)
   const [copied, setCopied] = useState(false)
 
@@ -76,7 +99,9 @@ export default function Scraping() {
     setLoading(true)
 
     const [sellersRes, countryRes, jobsRes] = await Promise.all([
-      supabase.from('amazon_sellers').select('amazon_seller_id, created_at', { count: 'exact' }),
+      supabase
+        .from('amazon_sellers')
+        .select('amazon_seller_id, created_at, category'),
       supabase.from('amazon_sellers').select('country'),
       supabase
         .from('scraping_jobs')
@@ -93,8 +118,15 @@ export default function Scraping() {
       .map((r) => r.created_at)
       .sort()
       .pop()
-
     setSellerStats({ total: rows.length, today, lastAt })
+
+    // Breakdown par catégorie
+    const catMap = rows.reduce((acc, r) => {
+      const k = r.category || 'mode'
+      acc[k] = (acc[k] || 0) + 1
+      return acc
+    }, {})
+    setCategoryCounts(catMap)
 
     const countryMap = (countryRes.data || []).reduce((acc, r) => {
       const c = (r.country || 'Inconnu').trim() || 'Inconnu'
@@ -126,32 +158,44 @@ export default function Scraping() {
     return () => supabase.removeChannel(channel)
   }, [])
 
-  async function launch() {
+  async function launch(overrides = {}) {
     setLaunching(true)
-    const { error } = await supabase.from('scraping_jobs').insert({
-      target_count: form.target_count,
-      parallel: form.parallel,
-      skip_existing: form.skip_existing,
+    const payload = {
+      category: overrides.category || form.category,
+      target_count: overrides.target_count ?? form.target_count,
+      parallel: overrides.parallel ?? form.parallel,
+      skip_existing: overrides.skip_existing ?? form.skip_existing,
       status: 'pending',
       triggered_by: 'dashboard',
-    })
+    }
+    const { error } = await supabase.from('scraping_jobs').insert(payload)
     setLaunching(false)
     if (error) {
       setToast({ type: 'error', msg: `Erreur : ${error.message}` })
     } else {
-      setToast({ type: 'ok', msg: 'Job créé — le runner le lancera automatiquement.' })
+      const cat = getCategory(payload.category)
+      setToast({
+        type: 'ok',
+        msg: `Job créé : ${payload.target_count} sellers ${cat.label} ${cat.emoji} — le runner va le lancer.`,
+      })
       loadAll()
     }
     setTimeout(() => setToast(null), 4000)
   }
 
-  const launchCmd = `python scraper.py --count ${form.target_count} --parallel ${form.parallel}${form.skip_existing ? '' : ' --no-dedup'}`
+  const selectedCat = getCategory(form.category)
+  const launchCmd = `python scraper.py --category ${form.category} --count ${form.target_count} --parallel ${form.parallel}${form.skip_existing ? '' : ' --no-dedup'}`
 
   function copyCmd() {
     navigator.clipboard.writeText(launchCmd)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const topCategory = useMemo(() => {
+    const entries = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])
+    return entries[0]?.[0] || null
+  }, [categoryCounts])
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -165,7 +209,7 @@ export default function Scraping() {
             <h1 className="text-2xl font-bold text-gray-900">Scraping Amazon FR</h1>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Pipeline de prospection — collecte automatique de nouveaux vendeurs tiers chaque matin
+            Pipeline de qualification multi-catégories — un seller scrapé = un seller prêt à être pitché à la bonne marketplace.
           </p>
         </div>
         <button
@@ -179,24 +223,100 @@ export default function Scraping() {
 
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-4">
-        <Stat icon={Database}  label="Vendeurs en base"   value={sellerStats.total}              color="#1B3A5C" />
-        <Stat icon={Users}     label="Ajoutés aujourd'hui" value={sellerStats.today}              color="#2E7D52" />
-        <Stat icon={Clock}     label="Dernier scrape"     value={fmtDate(sellerStats.lastAt)}   color="#3B82F6" sub="Timestamp du dernier insert" />
-        <Stat icon={Globe2}    label="Pays distincts"     value={countries.length}                color="#E8445A" />
+        <Stat icon={Database}  label="Vendeurs en base"   value={sellerStats.total}            color="#1B3A5C" />
+        <Stat icon={Users}     label="Ajoutés aujourd'hui" value={sellerStats.today}            color="#2E7D52" />
+        <Stat icon={Clock}     label="Dernier scrape"     value={fmtDate(sellerStats.lastAt)}  color="#3B82F6" sub="Timestamp du dernier insert" />
+        <Stat icon={Globe2}    label="Pays distincts"     value={countries.length}              color="#E8445A" />
+      </div>
+
+      {/* Catégories — répartition + lancement rapide */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Sellers par catégorie</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Clique sur une catégorie pour la scraper en 1 clic (config actuelle : {form.target_count} sellers · {form.parallel} workers)
+            </p>
+          </div>
+          {topCategory && (
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-xs font-medium text-gray-700">
+              <Target size={12} />
+              Dominant : {categoryLabel(topCategory)}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {CATEGORIES.map((c) => {
+            const count = categoryCounts[c.key] || 0
+            const pct = sellerStats.total ? Math.round((count / sellerStats.total) * 100) : 0
+            const isSelected = form.category === c.key
+            return (
+              <button
+                key={c.key}
+                onClick={() => setForm({ ...form, category: c.key })}
+                className={`text-left p-4 rounded-xl border-2 transition-all ${
+                  isSelected
+                    ? 'border-[#1B3A5C] bg-[#1B3A5C]/5 shadow-sm'
+                    : 'border-gray-100 hover:border-gray-300 bg-white'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-2xl">{c.emoji}</span>
+                  <span className="text-xs text-gray-400">{pct}%</span>
+                </div>
+                <p className="text-sm font-semibold text-gray-900">{c.label}</p>
+                <p className="text-xl font-bold text-[#1B3A5C] mt-1">{count}</p>
+                <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">
+                  {c.marketplaces.slice(0, 2).join(' · ')}
+                </p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    launch({ category: c.key })
+                  }}
+                  disabled={launching}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold text-white bg-[#E8445A] hover:bg-[#d13a4f] rounded-md disabled:opacity-60"
+                >
+                  <Zap size={11} />
+                  Scraper
+                </button>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Launch panel + config */}
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Lancer un scraping</h2>
-          <p className="text-sm text-gray-500 mb-5">
-            Un job est créé dans Supabase puis exécuté par le runner. Les doublons sont filtrés automatiquement.
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+            Lancer un scraping — {selectedCat.emoji} {selectedCat.label}
+          </h2>
+          <p className="text-sm text-gray-500 mb-1">
+            Sellers ciblés pour : <strong>{selectedCat.marketplaces.join(', ')}</strong>
           </p>
+          <p className="text-xs text-gray-400 mb-5">{selectedCat.description}</p>
 
           <div className="grid grid-cols-3 gap-4 mb-5">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                Nb vendeurs cible
+                Catégorie
+              </label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.emoji} {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                Nb sellers cible
               </label>
               <input
                 type="number"
@@ -210,7 +330,7 @@ export default function Scraping() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                Workers parallèles
+                Workers
               </label>
               <input
                 type="number"
@@ -221,32 +341,30 @@ export default function Scraping() {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                Dédup Supabase
-              </label>
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, skip_existing: !form.skip_existing })}
-                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  form.skip_existing
-                    ? 'bg-[#1B3A5C] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {form.skip_existing ? 'Actif — skip doublons' : 'Désactivé'}
-              </button>
-            </div>
           </div>
 
-          <button
-            onClick={launch}
-            disabled={launching}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E8445A] hover:bg-[#d13a4f] text-white font-semibold rounded-lg transition-colors disabled:opacity-60"
-          >
-            {launching ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="white" />}
-            {launching ? 'Création du job…' : 'Lancer le scraping'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => launch()}
+              disabled={launching}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E8445A] hover:bg-[#d13a4f] text-white font-semibold rounded-lg transition-colors disabled:opacity-60"
+            >
+              {launching ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="white" />}
+              {launching ? 'Création du job…' : `Lancer — ${selectedCat.label}`}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, skip_existing: !form.skip_existing })}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                form.skip_existing
+                  ? 'bg-[#1B3A5C]/10 text-[#1B3A5C]'
+                  : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {form.skip_existing ? '✓ Skip doublons' : 'Tous les sellers'}
+            </button>
+          </div>
 
           {toast && (
             <div
@@ -269,7 +387,7 @@ export default function Scraping() {
           <p className="text-xs text-white/60 mb-3">
             Même action en ligne de commande (pour dev local)
           </p>
-          <div className="bg-black/30 rounded-lg p-3 font-mono text-xs text-white mb-3 break-all">
+          <div className="bg-black/30 rounded-lg p-3 font-mono text-[11px] text-white mb-3 break-all leading-relaxed">
             {launchCmd}
           </div>
           <button
@@ -291,7 +409,9 @@ export default function Scraping() {
           ) : (
             <div className="space-y-3">
               {countries.map((c) => {
-                const pct = Math.round((c.count / sellerStats.total) * 100)
+                const pct = sellerStats.total
+                  ? Math.round((c.count / sellerStats.total) * 100)
+                  : 0
                 return (
                   <div key={c.name}>
                     <div className="flex items-center justify-between text-sm mb-1">
@@ -326,6 +446,7 @@ export default function Scraping() {
                 <thead>
                   <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                     <th className="py-2">Statut</th>
+                    <th className="py-2">Catégorie</th>
                     <th className="py-2">Créé</th>
                     <th className="py-2">Cible</th>
                     <th className="py-2">Workers</th>
@@ -344,6 +465,9 @@ export default function Scraping() {
                       <tr key={j.id} className="border-b border-gray-50 last:border-0">
                         <td className="py-3">
                           <StatusPill status={j.status} />
+                        </td>
+                        <td className="py-3">
+                          <CategoryBadge categoryKey={j.category || 'mode'} />
                         </td>
                         <td className="py-3 text-gray-600">{fmtDate(j.created_at)}</td>
                         <td className="py-3 text-gray-900 font-medium">{j.target_count}</td>

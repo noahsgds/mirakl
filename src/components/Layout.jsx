@@ -171,8 +171,8 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="px-5 py-4 border-t border-white/10">
-          <p className="text-white/30 text-xs">Amazon FR → Zalando</p>
-          <p className="text-white/20 text-xs">Pipeline outbound v1</p>
+          <p className="text-white/30 text-xs">Amazon FR → 8 marketplaces</p>
+          <p className="text-white/20 text-xs">Mode · Beauté · Maison · Sport · +4</p>
         </div>
       </aside>
 

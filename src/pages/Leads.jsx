@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
 import RecoBadge from '../components/RecoBadge'
 import LeadDrawer from '../components/LeadDrawer'
+import { CATEGORIES, getCategory } from '../lib/categories'
 
 const PAGE_SIZE = 50
 
@@ -15,6 +16,25 @@ const STATUS_OPTIONS = [
 
 const RECO_OPTIONS = ['QUALIFIE', 'A_REVOIR', 'REJETE']
 const CONTEXTE_OPTIONS = ['amazon_only', 'multichannel', 'high_performer']
+
+function MarketplaceChips({ list, color }) {
+  if (!list || list.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {list.slice(0, 3).map((m) => (
+        <span
+          key={m}
+          className={`inline-block px-1.5 py-0.5 text-[9px] font-semibold rounded ${color}`}
+        >
+          {m.replace(/_/g, ' ')}
+        </span>
+      ))}
+      {list.length > 3 && (
+        <span className="text-[9px] text-gray-400">+{list.length - 3}</span>
+      )}
+    </div>
+  )
+}
 
 function fmt(ts) {
   if (!ts) return '—'
@@ -34,6 +54,7 @@ export default function Leads() {
     scoreMin: '',
     contexte: '',
     variant: '',
+    category: '',
     search: '',
   })
   const [showFilters, setShowFilters] = useState(false)
@@ -45,7 +66,7 @@ export default function Leads() {
     setLoading(true)
     let query = supabase
       .from('seller_qualification')
-      .select('seller_id, statut, score_total, recommandation, contexte_detecte, decision_maker_name, decision_maker_title, enriched_at, ab_variant, amazon_sellers(seller_name, seller_url, categories), seller_sequence(sequence_step, statut_sequence)', { count: 'exact' })
+      .select('seller_id, statut, score_total, recommandation, contexte_detecte, decision_maker_name, decision_maker_title, enriched_at, ab_variant, amazon_sellers!inner(seller_name, seller_url, categories, category, target_marketplaces, present_marketplaces), seller_sequence(sequence_step, statut_sequence)', { count: 'exact' })
       .order('enriched_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -54,6 +75,7 @@ export default function Leads() {
     if (filters.scoreMin) query = query.gte('score_total', parseInt(filters.scoreMin))
     if (filters.contexte) query = query.eq('contexte_detecte', filters.contexte)
     if (filters.variant) query = query.eq('ab_variant', filters.variant)
+    if (filters.category) query = query.eq('amazon_sellers.category', filters.category)
 
     const { data, count } = await query
     let items = data || []
@@ -94,11 +116,11 @@ export default function Leads() {
   }
 
   function clearFilters() {
-    setFilters({ statuts: [], recommandation: '', scoreMin: '', contexte: '', variant: '', search: '' })
+    setFilters({ statuts: [], recommandation: '', scoreMin: '', contexte: '', variant: '', category: '', search: '' })
     setPage(0)
   }
 
-  const hasFilters = filters.statuts.length > 0 || filters.recommandation || filters.scoreMin || filters.contexte || filters.variant || filters.search
+  const hasFilters = filters.statuts.length > 0 || filters.recommandation || filters.scoreMin || filters.contexte || filters.variant || filters.category || filters.search
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -204,7 +226,7 @@ export default function Leads() {
           >
             <Filter size={15} />
             Filtres
-            {hasFilters && <span className="bg-white/20 rounded-full w-4 h-4 flex items-center justify-center text-xs">{filters.statuts.length + (filters.recommandation ? 1 : 0) + (filters.scoreMin ? 1 : 0) + (filters.contexte ? 1 : 0) + (filters.variant ? 1 : 0)}</span>}
+            {hasFilters && <span className="bg-white/20 rounded-full w-4 h-4 flex items-center justify-center text-xs">{filters.statuts.length + (filters.recommandation ? 1 : 0) + (filters.scoreMin ? 1 : 0) + (filters.contexte ? 1 : 0) + (filters.variant ? 1 : 0) + (filters.category ? 1 : 0)}</span>}
           </button>
           {hasFilters && (
             <button onClick={clearFilters} className="p-2 rounded-lg hover:bg-gray-100 text-muted transition-colors">
@@ -244,6 +266,27 @@ export default function Leads() {
 
       {showFilters && (
         <div className="card p-4 space-y-4">
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase mb-2">Catégorie produit</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => { setFilters((f) => ({ ...f, category: '' })); setPage(0) }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${!filters.category ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+              >
+                Toutes
+              </button>
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => { setFilters((f) => ({ ...f, category: c.key })); setPage(0) }}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${filters.category === c.key ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                >
+                  <span>{c.emoji}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div>
             <p className="text-xs font-semibold text-muted uppercase mb-2">Statut</p>
             <div className="flex flex-wrap gap-1.5">
@@ -346,11 +389,26 @@ export default function Leads() {
                     <td className="px-4 py-3"><ScoreBadge score={r.score_total} /></td>
                     <td className="px-4 py-3"><RecoBadge value={r.recommandation} /></td>
                     <td className="px-4 py-3">
-                      {r.amazon_sellers?.categories ? (
-                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">
-                          {r.amazon_sellers.categories}
-                        </span>
-                      ) : '—'}
+                      {(() => {
+                        const catKey = r.amazon_sellers?.category || 'mode'
+                        const cat = getCategory(catKey)
+                        const present = r.amazon_sellers?.present_marketplaces || []
+                        const target = r.amazon_sellers?.target_marketplaces || []
+                        return (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full whitespace-nowrap font-semibold">
+                              <span>{cat.emoji}</span>
+                              {cat.label}
+                            </span>
+                            {present.length > 0 && (
+                              <MarketplaceChips list={present} color="bg-green-100 text-green-700" />
+                            )}
+                            {present.length === 0 && target.length > 0 && (
+                              <MarketplaceChips list={target} color="bg-slate-50 text-slate-500" />
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={r.statut} /></td>
                     <td className="px-4 py-3 text-center">

@@ -3,8 +3,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, Cell, PieChart, Pie,
 } from 'recharts'
-import { BarChart2, TrendingUp, Tag, Target } from 'lucide-react'
+import { BarChart2, TrendingUp, Tag, Target, Layers } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { CATEGORIES, getCategory } from '../lib/categories'
 
 const FUNNEL_STEPS = [
   { key: 'A_SCORER', label: 'À scorer', color: '#94A3B8' },
@@ -36,7 +37,7 @@ export default function Analytics() {
   useEffect(() => {
     async function load() {
       const [{ data: q }, { data: s }] = await Promise.all([
-        supabase.from('seller_qualification').select('statut, score_total, contexte_detecte, enriched_at, scored_at, recommandation, amazon_sellers(categories)'),
+        supabase.from('seller_qualification').select('statut, score_total, contexte_detecte, enriched_at, scored_at, recommandation, amazon_sellers(category, categories, target_marketplaces, present_marketplaces)'),
         supabase.from('seller_sequence').select('mail1_sent_at, replied, opened_count, clicked_count, statut_sequence'),
       ])
       setQualData(q || [])
@@ -53,23 +54,31 @@ export default function Analytics() {
     fill: i >= 7 ? '#16a34a' : i >= 5 ? '#f59e0b' : '#e8445a',
   }))
 
-  /* ---- Categories performance ---- */
+  /* ---- Categories performance (par catégorie primaire) ---- */
   const catMap = {}
   qualData.forEach((r) => {
-    const cat = r.amazon_sellers?.categories || 'Autre'
-    if (!catMap[cat]) catMap[cat] = { total: 0, hot: 0, replied: 0 }
-    catMap[cat].total++
-    if (r.statut === 'HOT') catMap[cat].hot++
-    if (r.statut === 'REPLIED') catMap[cat].replied++
+    const catKey = r.amazon_sellers?.category || 'mode'
+    if (!catMap[catKey]) catMap[catKey] = { total: 0, hot: 0, replied: 0, present: 0 }
+    catMap[catKey].total++
+    if (r.statut === 'HOT') catMap[catKey].hot++
+    if (r.statut === 'REPLIED') catMap[catKey].replied++
+    const present = r.amazon_sellers?.present_marketplaces || []
+    if (present.length > 0) catMap[catKey].present++
   })
-  const catData = Object.entries(catMap)
-    .map(([cat, v]) => ({
-      cat: cat.length > 18 ? cat.slice(0, 18) + '…' : cat,
-      total: v.total,
-      taux: v.total > 0 ? Math.round(((v.hot + v.replied) / v.total) * 100) : 0,
-    }))
-    .sort((a, b) => b.taux - a.taux)
-    .slice(0, 10)
+  const catData = CATEGORIES
+    .map((c) => {
+      const v = catMap[c.key] || { total: 0, hot: 0, replied: 0, present: 0 }
+      return {
+        cat: `${c.emoji} ${c.label}`,
+        key: c.key,
+        total: v.total,
+        present: v.present,
+        taux: v.total > 0 ? Math.round(((v.hot + v.replied) / v.total) * 100) : 0,
+        tauxPresence: v.total > 0 ? Math.round((v.present / v.total) * 100) : 0,
+      }
+    })
+    .filter((d) => d.total > 0)
+    .sort((a, b) => b.total - a.total)
 
   /* ---- Funnel snapshot ---- */
   const statusCounts = qualData.reduce((acc, r) => {
@@ -206,15 +215,30 @@ export default function Analytics() {
         </ResponsiveContainer>
       </Section>
 
-      {/* Catégories */}
-      <Section icon={Tag} title="Top catégories par taux de conversion (HOT + REPLIED)">
+      {/* Catégories — volume */}
+      <Section icon={Layers} title="Sellers par catégorie (volume)">
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={catData} layout="vertical" margin={{ left: 110, right: 40 }}>
+          <BarChart data={catData} layout="vertical" margin={{ left: 130, right: 40 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+            <XAxis type="number" tick={{ fontSize: 11 }} />
+            <YAxis dataKey="cat" type="category" tick={{ fontSize: 11 }} width={130} />
+            <Tooltip formatter={(v, k) => [v, k === 'total' ? 'Total sellers' : 'Déjà sur marketplace']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="total" fill="#1B3A5C" radius={[0, 4, 4, 0]} name="Total" label={{ position: 'right', fontSize: 11, formatter: (v) => v > 0 ? v : '' }} />
+            <Bar dataKey="present" fill="#2E7D52" radius={[0, 4, 4, 0]} name="Déjà sur marketplace" />
+          </BarChart>
+        </ResponsiveContainer>
+      </Section>
+
+      {/* Catégories — conversion */}
+      <Section icon={Tag} title="Taux de conversion par catégorie (HOT + REPLIED)">
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={catData} layout="vertical" margin={{ left: 130, right: 40 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
             <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
-            <YAxis dataKey="cat" type="category" tick={{ fontSize: 11 }} width={110} />
+            <YAxis dataKey="cat" type="category" tick={{ fontSize: 11 }} width={130} />
             <Tooltip formatter={(v) => [`${v}%`, 'Taux conversion']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-            <Bar dataKey="taux" fill="#1B3A5C" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, formatter: (v) => v > 0 ? `${v}%` : '' }} />
+            <Bar dataKey="taux" fill="#E8445A" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, formatter: (v) => v > 0 ? `${v}%` : '' }} />
           </BarChart>
         </ResponsiveContainer>
       </Section>
