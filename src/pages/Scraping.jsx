@@ -251,10 +251,18 @@ export default function Scraping() {
             const pct = sellerStats.total ? Math.round((count / sellerStats.total) * 100) : 0
             const isSelected = form.category === c.key
             return (
-              <button
+              <div
                 key={c.key}
+                role="button"
+                tabIndex={0}
                 onClick={() => setForm({ ...form, category: c.key })}
-                className={`text-left p-4 rounded-xl border-2 transition-all ${
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setForm({ ...form, category: c.key })
+                  }
+                }}
+                className={`cursor-pointer text-left p-4 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/30 ${
                   isSelected
                     ? 'border-[#1B3A5C] bg-[#1B3A5C]/5 shadow-sm'
                     : 'border-gray-100 hover:border-gray-300 bg-white'
@@ -270,6 +278,7 @@ export default function Scraping() {
                   {c.marketplaces.slice(0, 2).join(' · ')}
                 </p>
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation()
                     launch({ category: c.key })
@@ -280,7 +289,7 @@ export default function Scraping() {
                   <Zap size={11} />
                   Scraper
                 </button>
-              </button>
+              </div>
             )
           })}
         </div>

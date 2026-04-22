@@ -192,7 +192,7 @@ export default function Leads() {
         rating: r.rating ? parseFloat(r.rating) : null,
         nb_reviews: r.nb_reviews ? parseInt(r.nb_reviews) : null,
         avg_price: r.avg_price ? parseFloat(r.avg_price) : null,
-      }, { onConflict: 'seller_id', ignoreDuplicates: false })
+      }, { onConflict: 'seller_url', ignoreDuplicates: false })
       if (error) errors++
       else inserted++
     }

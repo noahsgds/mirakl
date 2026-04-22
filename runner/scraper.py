@@ -324,24 +324,45 @@ def detect_language(country: str, business_name: str, seller_name: str) -> str:
     return "en"
 
 
+# Seul Zalando (mode) est validé bout-en-bout aujourd'hui.
+# Les autres marketplaces ont des pages de recherche souvent bloquées par anti-bot
+# (Sephora, Decathlon, Leroy Merlin, Fnac…) → le substring match produit trop de
+# faux positifs. On réactivera site par site avec un validateur dédié.
+_VALIDATED_PRESENCE_CHECKS = {"mode"}
+_GENERIC_TERMS = {
+    "store", "shop", "boutique", "official", "paris", "france",
+    "online", "commerce", "group", "groupe", "company",
+}
+
+
 def check_marketplace_presence(seller_name: str, category: str) -> tuple[list[str], str, str]:
     """
     Check HTTP direct si le seller vend déjà sur le marketplace primaire
     de sa catégorie. Retourne (present_marketplaces_list, url_trouvée, nom_marketplace).
 
-    Stratégie : on cherche le nom du seller dans la page de recherche du marketplace.
-    Si le nom apparaît (normalisé), on considère qu'il y a présence.
+    ⚠️  Aujourd'hui, seul `mode` (Zalando) est considéré fiable.
+    Pour toute autre catégorie on renvoie [] : plutôt zéro info que des faux
+    positifs qui pollueraient `present_marketplaces`.
     """
-    if not seller_name or len(seller_name) < 3:
+    if not seller_name or len(seller_name) < 4:
         return [], "", ""
     # Ignore les noms qui sont juste des IDs Amazon
     if re.fullmatch(r'[A-Z0-9]{10,20}', seller_name):
+        return [], "", ""
+
+    # Feature-flag : on ne fait confiance qu'aux validateurs vérifiés.
+    if category not in _VALIDATED_PRESENCE_CHECKS:
         return [], "", ""
 
     primary = PRIMARY_MARKETPLACE_CHECK.get(category)
     if not primary:
         return [], "", ""
     mp_key, url_template = primary
+
+    # Défense contre les noms trop courts ou génériques qui matchent partout.
+    clean = re.sub(r'[^a-z0-9]', '', seller_name.lower())
+    if not clean or len(clean) < 6 or clean in _GENERIC_TERMS:
+        return [], "", ""
 
     try:
         url = url_template.format(q=seller_name.replace(' ', '+'))
@@ -351,8 +372,7 @@ def check_marketplace_presence(seller_name: str, category: str) -> tuple[list[st
                           "Chrome/120.0 Safari/537.36"
         })
         if r.status_code == 200:
-            clean = re.sub(r'[^a-z0-9]', '', seller_name.lower())
-            if clean and len(clean) >= 4 and clean in re.sub(r'[^a-z0-9]', '', r.text.lower()):
+            if clean in re.sub(r'[^a-z0-9]', '', r.text.lower()):
                 return [mp_key], url, mp_key
     except Exception:
         pass
@@ -744,9 +764,12 @@ def log(msg: str):
 
 
 def phase_b_worker(worker_id: int, asin_queue: list, candidates: dict,
-                   existing_ids: set, cand_goal: int, stop_flag: list,
-                   category: str = "mode"):
-    """Un worker Phase B pioche des ASINs, extrait les sellers tiers."""
+                   existing_ids: set, cand_goal: int, stop_flag: list):
+    """Un worker Phase B pioche des ASINs, extrait les sellers tiers.
+
+    Note : la catégorie n'est pas utilisée ici — le tagging se fait en phase C
+    via `enrich_worker(..., category=...)` au moment où l'objet Seller est créé.
+    """
     driver = make_driver()
     try:
         driver.get("https://www.amazon.fr")
@@ -917,7 +940,7 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True,
             with ThreadPoolExecutor(max_workers=parallel) as pool:
                 futs = [
                     pool.submit(phase_b_worker, wid, asin_queue, candidates,
-                                existing_ids, cand_goal, stop_b, category)
+                                existing_ids, cand_goal, stop_b)
                     for wid in range(parallel)
                 ]
                 for f in as_completed(futs):
