@@ -8,6 +8,7 @@ import Templates from './pages/Templates'
 import ABTest from './pages/ABTest'
 import Errors from './pages/Errors'
 import Campaign from './pages/Campaign'
+import Scraping from './pages/Scraping'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/scraping" element={<Scraping />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/analytics" element={<Analytics />} />

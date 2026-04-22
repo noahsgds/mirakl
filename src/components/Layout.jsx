@@ -14,11 +14,13 @@ import {
   X,
   Flame,
   MessageSquare,
+  Bot,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/scraping', label: 'Scraping', icon: Bot },
   { to: '/leads', label: 'Leads', icon: Users },
   { to: '/inbox', label: 'Inbox', icon: Inbox },
   { to: '/analytics', label: 'Analytics', icon: BarChart2 },
