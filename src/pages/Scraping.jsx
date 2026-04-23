@@ -22,6 +22,11 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
+  Filter,
+  SlidersHorizontal,
+  X,
+  Languages,
+  TrendingUp,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CATEGORIES, getCategory, categoryLabel } from '../lib/categories'
@@ -101,20 +106,39 @@ function Rating({ value }) {
   )
 }
 
-function CountryFlag({ country }) {
-  if (!country) return <span className="text-gray-300">—</span>
-  const map = { 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹', 'ES': '🇪🇸', 'UK': '🇬🇧', 'GB': '🇬🇧', 'US': '🇺🇸', 'CN': '🇨🇳', 'NL': '🇳🇱', 'BE': '🇧🇪', 'PL': '🇵🇱' }
+const LANG_META = {
+  en: { flag: '🇬🇧', label: 'EN' },
+  fr: { flag: '🇫🇷', label: 'FR' },
+  de: { flag: '🇩🇪', label: 'DE' },
+  it: { flag: '🇮🇹', label: 'IT' },
+  es: { flag: '🇪🇸', label: 'ES' },
+  nl: { flag: '🇳🇱', label: 'NL' },
+  pl: { flag: '🇵🇱', label: 'PL' },
+}
+
+function LangFlag({ lang }) {
+  if (!lang) return <span className="text-gray-300">—</span>
+  const m = LANG_META[lang.toLowerCase()] || { flag: '🌍', label: lang.toUpperCase() }
   return (
     <span className="inline-flex items-center gap-1 text-xs text-gray-700">
-      <span>{map[country.toUpperCase()] || '🌍'}</span>
-      <span>{country}</span>
+      <span>{m.flag}</span>
+      <span>{m.label}</span>
     </span>
   )
 }
 
+const DEFAULT_FILTERS = {
+  languages: [],       // ['en','fr','de','it']
+  ratingMin: '',       // number 0-5
+  feedbackMin: '',     // number 0-100
+  productsMin: '',     // int
+  onZalandoOnly: false,
+  since: '',           // 'today' | '7d' | '30d' | ''
+}
+
 export default function Scraping() {
-  const [sellerStats, setSellerStats] = useState({ total: 0, today: 0, lastAt: null })
-  const [countries, setCountries] = useState([])
+  const [sellerStats, setSellerStats] = useState({ total: 0, today: 0, lastAt: null, avgRating: 0 })
+  const [langCounts, setLangCounts] = useState([])
   const [categoryCounts, setCategoryCounts] = useState({})
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -135,14 +159,15 @@ export default function Scraping() {
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState({ key: 'created_at', dir: 'desc' })
   const [selectedSeller, setSelectedSeller] = useState(null)
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [showFilters, setShowFilters] = useState(false)
   const sellersRef = useRef(null)
 
   async function loadAll() {
     setLoading(true)
 
-    const [sellersRes, countryRes, jobsRes] = await Promise.all([
-      supabase.from('amazon_sellers').select('amazon_seller_id, created_at, category'),
-      supabase.from('amazon_sellers').select('country'),
+    const [sellersRes, jobsRes] = await Promise.all([
+      supabase.from('amazon_sellers').select('amazon_seller_id, created_at, category, seller_language, rating'),
       supabase.from('scraping_jobs').select('*').order('created_at', { ascending: false }).limit(10),
     ])
 
@@ -151,7 +176,11 @@ export default function Scraping() {
     todayStart.setHours(0, 0, 0, 0)
     const today = rows.filter((r) => new Date(r.created_at) >= todayStart).length
     const lastAt = rows.map((r) => r.created_at).sort().pop()
-    setSellerStats({ total: rows.length, today, lastAt })
+    const rated = rows.filter((r) => r.rating != null)
+    const avgRating = rated.length
+      ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length
+      : 0
+    setSellerStats({ total: rows.length, today, lastAt, avgRating })
 
     const catMap = rows.reduce((acc, r) => {
       const k = r.category || 'mode'
@@ -160,16 +189,15 @@ export default function Scraping() {
     }, {})
     setCategoryCounts(catMap)
 
-    const countryMap = (countryRes.data || []).reduce((acc, r) => {
-      const c = (r.country || 'Inconnu').trim() || 'Inconnu'
-      acc[c] = (acc[c] || 0) + 1
+    const langMap = rows.reduce((acc, r) => {
+      const l = (r.seller_language || '').toLowerCase() || 'unknown'
+      acc[l] = (acc[l] || 0) + 1
       return acc
     }, {})
-    const countryList = Object.entries(countryMap)
+    const langList = Object.entries(langMap)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([name, count]) => ({ name, count }))
-    setCountries(countryList)
+      .map(([code, count]) => ({ code, count }))
+    setLangCounts(langList)
 
     setJobs(jobsRes.data || [])
     setLoading(false)
@@ -221,15 +249,42 @@ export default function Scraping() {
   const filteredSellers = useMemo(() => {
     const s = search.toLowerCase().trim()
     let out = sellers
+
+    // Filters
+    if (filters.languages.length > 0) {
+      out = out.filter((r) => filters.languages.includes((r.seller_language || '').toLowerCase()))
+    }
+    if (filters.ratingMin !== '' && filters.ratingMin != null) {
+      const v = parseFloat(filters.ratingMin)
+      out = out.filter((r) => r.rating != null && Number(r.rating) >= v)
+    }
+    if (filters.feedbackMin !== '' && filters.feedbackMin != null) {
+      const v = parseFloat(filters.feedbackMin)
+      out = out.filter((r) => r.positive_feedback_pct != null && Number(r.positive_feedback_pct) >= v)
+    }
+    if (filters.productsMin !== '' && filters.productsMin != null) {
+      const v = parseInt(filters.productsMin)
+      out = out.filter((r) => r.nb_products != null && r.nb_products >= v)
+    }
+    if (filters.onZalandoOnly) {
+      out = out.filter((r) => r.on_zalando)
+    }
+    if (filters.since) {
+      const now = Date.now()
+      const ms = filters.since === 'today' ? 86400000 : filters.since === '7d' ? 7 * 86400000 : 30 * 86400000
+      out = out.filter((r) => r.created_at && now - new Date(r.created_at).getTime() <= ms)
+    }
+
     if (s) {
       out = out.filter(
         (r) =>
           r.seller_name?.toLowerCase().includes(s) ||
           r.business_name?.toLowerCase().includes(s) ||
           r.amazon_seller_id?.toLowerCase().includes(s) ||
-          r.country?.toLowerCase().includes(s)
+          r.seller_language?.toLowerCase().includes(s)
       )
     }
+
     const { key, dir } = sort
     const mul = dir === 'asc' ? 1 : -1
     out = [...out].sort((a, b) => {
@@ -241,7 +296,26 @@ export default function Scraping() {
       return String(va).localeCompare(String(vb)) * mul
     })
     return out
-  }, [sellers, search, sort])
+  }, [sellers, search, sort, filters])
+
+  const activeFilterCount =
+    filters.languages.length +
+    (filters.ratingMin !== '' ? 1 : 0) +
+    (filters.feedbackMin !== '' ? 1 : 0) +
+    (filters.productsMin !== '' ? 1 : 0) +
+    (filters.onZalandoOnly ? 1 : 0) +
+    (filters.since ? 1 : 0)
+
+  function toggleLang(code) {
+    setFilters((f) => ({
+      ...f,
+      languages: f.languages.includes(code) ? f.languages.filter((x) => x !== code) : [...f.languages, code],
+    }))
+  }
+
+  function clearFilters() {
+    setFilters(DEFAULT_FILTERS)
+  }
 
   function toggleSort(key) {
     setSort((s) => ({ key, dir: s.key === key && s.dir === 'desc' ? 'asc' : 'desc' }))
@@ -398,10 +472,10 @@ export default function Scraping() {
 
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-4">
-        <Stat icon={Database}  label="Vendeurs en base"   value={sellerStats.total}            color="#1B3A5C" />
-        <Stat icon={Users}     label="Ajoutés aujourd'hui" value={sellerStats.today}            color="#2E7D52" />
-        <Stat icon={Clock}     label="Dernier scrape"     value={fmtDate(sellerStats.lastAt)}  color="#3B82F6" sub="Timestamp du dernier insert" />
-        <Stat icon={Globe2}    label="Pays distincts"     value={countries.length}              color="#E8445A" />
+        <Stat icon={Database}  label="Vendeurs en base"   value={sellerStats.total}                         color="#1B3A5C" />
+        <Stat icon={Users}     label="Ajoutés aujourd'hui" value={sellerStats.today}                         color="#2E7D52" />
+        <Stat icon={Clock}     label="Dernier scrape"     value={fmtDate(sellerStats.lastAt)}               color="#3B82F6" sub="Dernier insert" />
+        <Stat icon={TrendingUp} label="Note moyenne"      value={sellerStats.avgRating ? sellerStats.avgRating.toFixed(2) : '—'} color="#E8445A" sub="sur les sellers notés" />
       </div>
 
       {/* Catégories — click to drill down */}
@@ -513,9 +587,34 @@ export default function Scraping() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Rechercher un vendeur…"
-                className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C] w-64"
+                className="pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C] w-56"
               />
             </div>
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                showFilters || activeFilterCount > 0
+                  ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span className="bg-white/25 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                title="Réinitialiser les filtres"
+              >
+                <X size={15} />
+              </button>
+            )}
             <button
               onClick={exportSellersCSV}
               disabled={filteredSellers.length === 0}
@@ -528,13 +627,115 @@ export default function Scraping() {
           </div>
         </div>
 
+        {showFilters && (
+          <div className="p-5 border-b border-gray-100 bg-gray-50/60 space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <Languages size={11} className="inline -mt-0.5 mr-1" />
+                Langue du seller
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {['en', 'fr', 'de', 'it', 'es', 'nl', 'pl'].map((code) => {
+                  const meta = LANG_META[code] || { flag: '🌍', label: code.toUpperCase() }
+                  const active = filters.languages.includes(code)
+                  const count = langCounts.find((l) => l.code === code)?.count || 0
+                  return (
+                    <button
+                      key={code}
+                      onClick={() => toggleLang(code)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                        active
+                          ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                      } ${count === 0 ? 'opacity-40' : ''}`}
+                    >
+                      <span>{meta.flag}</span>
+                      {meta.label}
+                      <span className={active ? 'text-white/70' : 'text-gray-400'}>({count})</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Note min ★</label>
+                <select
+                  value={filters.ratingMin}
+                  onChange={(e) => setFilters((f) => ({ ...f, ratingMin: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
+                >
+                  <option value="">Toutes</option>
+                  <option value="3.5">≥ 3.5</option>
+                  <option value="4.0">≥ 4.0</option>
+                  <option value="4.5">≥ 4.5</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Feedback min %</label>
+                <select
+                  value={filters.feedbackMin}
+                  onChange={(e) => setFilters((f) => ({ ...f, feedbackMin: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
+                >
+                  <option value="">Tous</option>
+                  <option value="75">≥ 75%</option>
+                  <option value="85">≥ 85%</option>
+                  <option value="90">≥ 90%</option>
+                  <option value="95">≥ 95%</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Catalogue min</label>
+                <select
+                  value={filters.productsMin}
+                  onChange={(e) => setFilters((f) => ({ ...f, productsMin: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
+                >
+                  <option value="">Tous</option>
+                  <option value="10">≥ 10 produits</option>
+                  <option value="20">≥ 20 produits</option>
+                  <option value="50">≥ 50 produits</option>
+                  <option value="100">≥ 100 produits</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Scrapé depuis</label>
+                <select
+                  value={filters.since}
+                  onChange={(e) => setFilters((f) => ({ ...f, since: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
+                >
+                  <option value="">Toujours</option>
+                  <option value="today">Aujourd'hui</option>
+                  <option value="7d">7 derniers jours</option>
+                  <option value="30d">30 derniers jours</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.onZalandoOnly}
+                  onChange={(e) => setFilters((f) => ({ ...f, onZalandoOnly: e.target.checked }))}
+                  className="rounded border-gray-300 text-[#1B3A5C] focus:ring-[#1B3A5C]/30"
+                />
+                <span>Uniquement déjà sur Zalando</span>
+              </label>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <SortTh label="Vendeur" sortKey="seller_name" sort={sort} onClick={toggleSort} />
                 <th className="px-4 py-3">Catégorie</th>
-                <th className="px-4 py-3">Pays</th>
+                <th className="px-4 py-3">Langue</th>
                 <SortTh label="Note" sortKey="rating" sort={sort} onClick={toggleSort} align="right" />
                 <SortTh label="Reviews" sortKey="nb_reviews" sort={sort} onClick={toggleSort} align="right" />
                 <SortTh label="Feedback" sortKey="positive_feedback_pct" sort={sort} onClick={toggleSort} align="right" />
@@ -568,7 +769,7 @@ export default function Scraping() {
                       )}
                     </td>
                     <td className="px-4 py-3"><CategoryBadge categoryKey={s.category || 'mode'} /></td>
-                    <td className="px-4 py-3"><CountryFlag country={s.country} /></td>
+                    <td className="px-4 py-3"><LangFlag lang={s.seller_language} /></td>
                     <td className="px-4 py-3 text-right"><Rating value={s.rating} /></td>
                     <td className="px-4 py-3 text-right text-gray-700">{s.nb_reviews ?? '—'}</td>
                     <td className="px-4 py-3 text-right text-gray-700">{s.positive_feedback_pct != null ? `${s.positive_feedback_pct}%` : '—'}</td>
@@ -671,26 +872,37 @@ export default function Scraping() {
         </div>
       </div>
 
-      {/* Two-column: country + jobs history */}
+      {/* Two-column: language + jobs history */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Répartition pays</h2>
-          {countries.length === 0 ? (
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Répartition par langue</h2>
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">seller Amazon</span>
+          </div>
+          {langCounts.length === 0 ? (
             <p className="text-sm text-gray-400">Aucune donnée</p>
           ) : (
             <div className="space-y-3">
-              {countries.map((c) => {
-                const pct = sellerStats.total ? Math.round((c.count / sellerStats.total) * 100) : 0
+              {langCounts.map((l) => {
+                const pct = sellerStats.total ? Math.round((l.count / sellerStats.total) * 100) : 0
+                const meta = LANG_META[l.code] || { flag: l.code === 'unknown' ? '❓' : '🌍', label: l.code.toUpperCase() }
                 return (
-                  <div key={c.name}>
+                  <button
+                    key={l.code}
+                    onClick={() => l.code !== 'unknown' && toggleLang(l.code)}
+                    className={`w-full text-left block group ${l.code === 'unknown' ? 'cursor-default' : 'hover:bg-gray-50 rounded-lg'} p-1 -m-1`}
+                  >
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-700">{c.name}</span>
-                      <span className="text-gray-500 text-xs">{c.count} · {pct}%</span>
+                      <span className="inline-flex items-center gap-1.5 text-gray-700">
+                        <span>{meta.flag}</span>
+                        <span>{meta.label === 'UNKNOWN' ? 'Inconnue' : meta.label}</span>
+                      </span>
+                      <span className="text-gray-500 text-xs">{l.count} · {pct}%</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-1.5">
                       <div className="bg-[#1B3A5C] h-1.5 rounded-full" style={{ width: `${pct}%` }} />
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
@@ -879,7 +1091,7 @@ function SellerDrawer({ seller, onClose }) {
           </div>
           <div className="flex items-center gap-2">
             <CategoryBadge categoryKey={cat.key} size="md" />
-            <CountryFlag country={seller.country} />
+            <LangFlag lang={seller.seller_language} />
             {seller.on_zalando && (
               <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
                 Sur Zalando
