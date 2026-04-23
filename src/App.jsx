@@ -8,6 +8,7 @@ import Templates from './pages/Templates'
 import ABTest from './pages/ABTest'
 import Errors from './pages/Errors'
 import Campaign from './pages/Campaign'
+import Pipeline from './pages/Pipeline'
 import Scraping from './pages/Scraping'
 import Debug from './pages/Debug'
 

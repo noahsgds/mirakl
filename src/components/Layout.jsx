@@ -15,19 +15,21 @@ import {
   Flame,
   MessageSquare,
   Bot,
+  GitBranch,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/scraping', label: 'Scraping', icon: Bot },
-  { to: '/leads', label: 'Leads', icon: Users },
-  { to: '/inbox', label: 'Inbox', icon: Inbox },
-  { to: '/analytics', label: 'Analytics', icon: BarChart2 },
-  { to: '/templates', label: 'Templates', icon: FileText },
-  { to: '/abtest', label: 'A/B Test', icon: FlaskConical },
-  { to: '/erreurs', label: 'Erreurs', icon: AlertTriangle },
-  { to: '/campagne', label: 'Campagne', icon: Settings },
+  { to: '/',         label: 'Dashboard',  icon: LayoutDashboard },
+  { to: '/pipeline', label: 'Pipeline',   icon: GitBranch },
+  { to: '/scraping', label: 'Scraping',   icon: Bot },
+  { to: '/leads',    label: 'Leads',      icon: Users },
+  { to: '/inbox',    label: 'Inbox',      icon: Inbox },
+  { to: '/analytics',label: 'Analytics',  icon: BarChart2 },
+  { to: '/templates',label: 'Templates',  icon: FileText },
+  { to: '/abtest',   label: 'A/B Test',   icon: FlaskConical },
+  { to: '/erreurs',  label: 'Erreurs',    icon: AlertTriangle },
+  { to: '/campagne', label: 'Campagne',   icon: Settings },
 ]
 
 function NotificationBell() {
