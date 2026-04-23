@@ -21,7 +21,7 @@ const WEBHOOKS = [
     border: 'border-purple-200',
     text: 'text-purple-700',
     btnBg: 'bg-purple-600 hover:bg-purple-700',
-    url: 'https://noahsgds.app.n8n.cloud/webhook/lancer-enrichissement',
+    url: 'https://noahsgds.app.n8n.cloud/webhook-test/lancer-enrichissement',
   },
   {
     id: 'generation',
@@ -33,7 +33,7 @@ const WEBHOOKS = [
     border: 'border-blue-200',
     text: 'text-blue-700',
     btnBg: 'bg-[#1B3A5C] hover:bg-[#15304e]',
-    url: 'https://noahsgds.app.n8n.cloud/webhook/lancer-generation',
+    url: 'https://noahsgds.app.n8n.cloud/webhook-test/lancer-generation',
   },
   {
     id: 'sequence',
@@ -45,7 +45,7 @@ const WEBHOOKS = [
     border: 'border-red-200',
     text: 'text-red-700',
     btnBg: 'bg-[#E8445A] hover:bg-red-600',
-    url: 'https://noahsgds.app.n8n.cloud/webhook/lancer-sequence',
+    url: 'https://noahsgds.app.n8n.cloud/webhook-test/lancer-sequence',
   },
 ]
 
