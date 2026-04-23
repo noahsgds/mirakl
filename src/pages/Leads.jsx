@@ -13,8 +13,7 @@ const STATUS_OPTIONS = [
   'scored', 'enriched', 'sequence_en_cours', 'sequence_terminee', 'HOT', 'REPLIED',
   'enrichment_failed', 'enrichment_failed_final', 'generation_failed', 'REJETE_FILTRE', 'A_SCORER',
 ]
-
-const RECO_OPTIONS = ['QUALIFIE', 'A_REVOIR', 'REJETE']
+const RECO_OPTIONS    = ['QUALIFIE', 'A_REVOIR', 'REJETE']
 const CONTEXTE_OPTIONS = ['amazon_only', 'multichannel', 'high_performer']
 
 function MarketplaceChips({ list, color }) {
@@ -24,13 +23,20 @@ function MarketplaceChips({ list, color }) {
       {list.slice(0, 3).map((m) => (
         <span
           key={m}
-          className={`inline-block px-1.5 py-0.5 text-[9px] font-semibold rounded ${color}`}
+          style={{
+            display: 'inline-block',
+            padding: '1px 5px',
+            fontSize: '9px',
+            fontWeight: 600,
+            borderRadius: '4px',
+            ...color,
+          }}
         >
           {m.replace(/_/g, ' ')}
         </span>
       ))}
       {list.length > 3 && (
-        <span className="text-[9px] text-gray-400">+{list.length - 3}</span>
+        <span style={{ fontSize: '9px', color: 'var(--text-3)' }}>+{list.length - 3}</span>
       )}
     </div>
   )
@@ -41,24 +47,36 @@ function fmt(ts) {
   return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 }
 
+const TH = ({ children }) => (
+  <th style={{
+    padding: '10px 14px',
+    textAlign: 'left',
+    fontSize: '10px',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--text-3)',
+    whiteSpace: 'nowrap',
+    background: 'var(--surface-2)',
+    borderBottom: '1px solid var(--border)',
+    fontFamily: 'Outfit, sans-serif',
+  }}>
+    {children}
+  </th>
+)
+
 export default function Leads() {
-  const [rows, setRows] = useState([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [rows, setRows]         = useState([])
+  const [total, setTotal]       = useState(0)
+  const [page, setPage]         = useState(0)
+  const [loading, setLoading]   = useState(true)
   const [selectedId, setSelectedId] = useState(null)
 
   const [filters, setFilters] = useState({
-    statuts: [],
-    recommandation: '',
-    scoreMin: '',
-    contexte: '',
-    variant: '',
-    category: '',
-    search: '',
+    statuts: [], recommandation: '', scoreMin: '', contexte: '', variant: '', category: '', search: '',
   })
   const [showFilters, setShowFilters] = useState(false)
-  const [importing, setImporting] = useState(false)
+  const [importing, setImporting]     = useState(false)
   const [importResult, setImportResult] = useState(null)
   const fileInputRef = useRef(null)
 
@@ -70,12 +88,12 @@ export default function Leads() {
       .order('enriched_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-    if (filters.statuts.length > 0) query = query.in('statut', filters.statuts)
-    if (filters.recommandation) query = query.eq('recommandation', filters.recommandation)
-    if (filters.scoreMin) query = query.gte('score_total', parseInt(filters.scoreMin))
-    if (filters.contexte) query = query.eq('contexte_detecte', filters.contexte)
-    if (filters.variant) query = query.eq('ab_variant', filters.variant)
-    if (filters.category) query = query.eq('amazon_sellers.category', filters.category)
+    if (filters.statuts.length > 0)  query = query.in('statut', filters.statuts)
+    if (filters.recommandation)       query = query.eq('recommandation', filters.recommandation)
+    if (filters.scoreMin)             query = query.gte('score_total', parseInt(filters.scoreMin))
+    if (filters.contexte)             query = query.eq('contexte_detecte', filters.contexte)
+    if (filters.variant)              query = query.eq('ab_variant', filters.variant)
+    if (filters.category)             query = query.eq('amazon_sellers.category', filters.category)
 
     const { data, count } = await query
     let items = data || []
@@ -96,13 +114,10 @@ export default function Leads() {
 
   useEffect(() => { loadLeads() }, [loadLeads])
 
-  /* Realtime auto-refresh */
   useEffect(() => {
     const channel = supabase
       .channel('leads-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'seller_qualification' }, () => {
-        loadLeads()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'seller_qualification' }, () => { loadLeads() })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [loadLeads])
@@ -121,10 +136,8 @@ export default function Leads() {
   }
 
   const hasFilters = filters.statuts.length > 0 || filters.recommandation || filters.scoreMin || filters.contexte || filters.variant || filters.category || filters.search
-
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  /* ---- CSV Export ---- */
   async function handleExport() {
     const { data } = await supabase
       .from('seller_qualification')
@@ -133,9 +146,8 @@ export default function Leads() {
     if (!data) return
 
     const cols = ['seller_name', 'seller_url', 'categories', 'nb_products', 'rating', 'statut', 'score_total', 'recommandation', 'contexte_detecte', 'decision_maker_name', 'decision_maker_email', 'decision_maker_title', 'decision_maker_linkedin', 'enriched_at', 'ab_variant', 'error_reason']
-    const header = cols.join(',')
     const esc = (v) => (v == null ? '' : `"${String(v).replace(/"/g, '""')}"`)
-    const rows = data.map((r) => [
+    const csvRows = data.map((r) => [
       esc(r.amazon_sellers?.seller_name), esc(r.amazon_sellers?.seller_url), esc(r.amazon_sellers?.categories),
       esc(r.amazon_sellers?.nb_products), esc(r.amazon_sellers?.rating),
       esc(r.statut), esc(r.score_total), esc(r.recommandation), esc(r.contexte_detecte),
@@ -143,7 +155,7 @@ export default function Leads() {
       esc(r.enriched_at), esc(r.ab_variant), esc(r.error_reason),
     ].join(','))
 
-    const csv = [header, ...rows].join('\n')
+    const csv = [cols.join(','), ...csvRows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -153,17 +165,14 @@ export default function Leads() {
     URL.revokeObjectURL(url)
   }
 
-  /* ---- CSV Import ---- */
   async function handleImport(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setImporting(true)
     setImportResult(null)
-
     const text = await file.text()
     const lines = text.split('\n').filter(Boolean)
     const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''))
-
     const parse = (line) => {
       const vals = []
       let cur = '', inQ = false
@@ -175,103 +184,155 @@ export default function Leads() {
       vals.push(cur)
       return vals.map((v) => v.trim().replace(/^"|"$/g, '') || null)
     }
-
     const records = lines.slice(1).map((line) => {
       const vals = parse(line)
       return headers.reduce((acc, h, i) => ({ ...acc, [h]: vals[i] }), {})
     })
-
     let inserted = 0, errors = 0
     for (const r of records) {
       if (!r.seller_name) continue
       const { error } = await supabase.from('amazon_sellers').upsert({
-        seller_name: r.seller_name,
-        seller_url: r.seller_url || null,
-        categories: r.categories || null,
+        seller_name: r.seller_name, seller_url: r.seller_url || null, categories: r.categories || null,
         nb_products: r.nb_products ? parseInt(r.nb_products) : null,
         rating: r.rating ? parseFloat(r.rating) : null,
         nb_reviews: r.nb_reviews ? parseInt(r.nb_reviews) : null,
         avg_price: r.avg_price ? parseFloat(r.avg_price) : null,
       }, { onConflict: 'seller_url', ignoreDuplicates: false })
-      if (error) errors++
-      else inserted++
+      if (error) errors++; else inserted++
     }
-
     setImportResult({ inserted, errors })
     setImporting(false)
     e.target.value = ''
     loadLeads()
   }
 
+  const filterBtnStyle = (active) => ({
+    padding: '7px 12px',
+    borderRadius: '8px',
+    fontSize: '12px',
+    fontWeight: 500,
+    fontFamily: 'Outfit, sans-serif',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    background: active ? 'rgba(255,51,88,0.12)' : 'var(--surface-2)',
+    color: active ? '#FF3358' : 'var(--text-3)',
+    border: active ? '1px solid rgba(255,51,88,0.25)' : '1px solid var(--border-strong)',
+  })
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+
+      {/* Header */}
+      <div className="fade-up flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-text">Leads</h1>
-          <p className="text-muted text-sm mt-0.5">{total.toLocaleString()} leads au total</p>
+          <h1 style={{
+            fontFamily: 'Fraunces, Georgia, serif',
+            fontSize: '2rem',
+            fontWeight: 700,
+            letterSpacing: '-0.025em',
+            color: 'var(--text)',
+            lineHeight: 1.1,
+          }}>
+            Leads
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-3)', fontFamily: 'DM Mono, monospace' }}>
+            {total.toLocaleString()} leads
+          </p>
         </div>
+
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Search */}
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
             <input
-              className="input pl-9 w-48"
-              placeholder="Rechercher..."
+              className="input"
+              style={{ paddingLeft: '30px', width: '180px' }}
+              placeholder="Rechercher…"
               value={filters.search}
               onChange={(e) => { setFilters((f) => ({ ...f, search: e.target.value })); setPage(0) }}
             />
           </div>
+
+          {/* Filter toggle */}
           <button
             onClick={() => setShowFilters((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${showFilters || hasFilters ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-text border-gray-200 hover:bg-gray-50'}`}
+            style={{
+              ...filterBtnStyle(showFilters || hasFilters),
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
           >
-            <Filter size={15} />
+            <Filter size={13} />
             Filtres
-            {hasFilters && <span className="bg-white/20 rounded-full w-4 h-4 flex items-center justify-center text-xs">{filters.statuts.length + (filters.recommandation ? 1 : 0) + (filters.scoreMin ? 1 : 0) + (filters.contexte ? 1 : 0) + (filters.variant ? 1 : 0) + (filters.category ? 1 : 0)}</span>}
+            {hasFilters && (
+              <span
+                className="w-4 h-4 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(255,51,88,0.25)', fontSize: '9px', fontWeight: 700, color: '#FF3358' }}
+              >
+                {filters.statuts.length + (filters.recommandation ? 1 : 0) + (filters.scoreMin ? 1 : 0) + (filters.contexte ? 1 : 0) + (filters.variant ? 1 : 0) + (filters.category ? 1 : 0)}
+              </span>
+            )}
           </button>
+
           {hasFilters && (
-            <button onClick={clearFilters} className="p-2 rounded-lg hover:bg-gray-100 text-muted transition-colors">
-              <X size={16} />
+            <button
+              onClick={clearFilters}
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}
+            >
+              <X size={14} />
             </button>
           )}
-          <div className="flex items-center gap-1 ml-1">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-text hover:bg-gray-50 transition-colors"
-              title="Exporter en CSV"
-            >
-              <Download size={15} />
-              Export CSV
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 bg-white text-text hover:bg-gray-50 transition-colors disabled:opacity-50"
-              title="Importer des leads (CSV)"
-            >
-              {importing ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />}
-              Import CSV
-            </button>
-            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
-          </div>
+
+          <button onClick={handleExport} className="btn-secondary" style={{ fontSize: '12px', padding: '7px 12px' }}>
+            <Download size={13} />
+            Export CSV
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="btn-secondary"
+            style={{ fontSize: '12px', padding: '7px 12px', opacity: importing ? 0.5 : 1 }}
+          >
+            {importing ? <RefreshCw size={13} className="animate-spin" /> : <Upload size={13} />}
+            Import CSV
+          </button>
+          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
         </div>
       </div>
 
+      {/* Import result */}
       {importResult && (
-        <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm border ${importResult.errors === 0 ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-          <CheckCircle2 size={15} />
-          Import terminé — {importResult.inserted} ligne(s) importée(s){importResult.errors > 0 ? `, ${importResult.errors} erreur(s)` : ''}
-          <button onClick={() => setImportResult(null)} className="ml-auto"><X size={14} /></button>
+        <div
+          className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm"
+          style={{
+            background: importResult.errors === 0 ? 'rgba(0,201,123,0.08)' : 'rgba(255,176,32,0.08)',
+            border: `1px solid ${importResult.errors === 0 ? 'rgba(0,201,123,0.2)' : 'rgba(255,176,32,0.2)'}`,
+            color: importResult.errors === 0 ? '#00C97B' : '#FFB020',
+          }}
+        >
+          <CheckCircle2 size={14} />
+          Import terminé — {importResult.inserted} ligne(s) importée(s)
+          {importResult.errors > 0 ? `, ${importResult.errors} erreur(s)` : ''}
+          <button onClick={() => setImportResult(null)} className="ml-auto" style={{ color: 'inherit', opacity: 0.6 }}>
+            <X size={13} />
+          </button>
         </div>
       )}
 
+      {/* Filters panel */}
       {showFilters && (
-        <div className="card p-4 space-y-4">
+        <div className="card space-y-4 fade-up">
+          {/* Categories */}
           <div>
-            <p className="text-xs font-semibold text-muted uppercase mb-2">Catégorie produit</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}>
+              Catégorie produit
+            </p>
             <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => { setFilters((f) => ({ ...f, category: '' })); setPage(0) }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${!filters.category ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                style={filterBtnStyle(!filters.category)}
               >
                 Toutes
               </button>
@@ -279,7 +340,7 @@ export default function Leads() {
                 <button
                   key={c.key}
                   onClick={() => { setFilters((f) => ({ ...f, category: c.key })); setPage(0) }}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${filters.category === c.key ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                  style={{ ...filterBtnStyle(filters.category === c.key), display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 >
                   <span>{c.emoji}</span>
                   {c.label}
@@ -287,42 +348,52 @@ export default function Leads() {
               ))}
             </div>
           </div>
+
+          {/* Statuts */}
           <div>
-            <p className="text-xs font-semibold text-muted uppercase mb-2">Statut</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}>
+              Statut
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {STATUS_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => toggleStatus(s)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${filters.statuts.includes(s) ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
-                >
+                <button key={s} onClick={() => toggleStatus(s)} style={filterBtnStyle(filters.statuts.includes(s))}>
                   {s}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Other filters */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Recommandation</label>
-              <select className="input w-full" value={filters.recommandation} onChange={(e) => { setFilters((f) => ({ ...f, recommandation: e.target.value })); setPage(0) }}>
+              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}>
+                Recommandation
+              </label>
+              <select className="input" value={filters.recommandation} onChange={(e) => { setFilters((f) => ({ ...f, recommandation: e.target.value })); setPage(0) }}>
                 <option value="">Toutes</option>
                 {RECO_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Score min</label>
-              <input type="number" min="0" max="100" className="input w-full" placeholder="0" value={filters.scoreMin} onChange={(e) => { setFilters((f) => ({ ...f, scoreMin: e.target.value })); setPage(0) }} />
+              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}>
+                Score min
+              </label>
+              <input type="number" min="0" max="100" className="input" placeholder="0" value={filters.scoreMin} onChange={(e) => { setFilters((f) => ({ ...f, scoreMin: e.target.value })); setPage(0) }} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Contexte</label>
-              <select className="input w-full" value={filters.contexte} onChange={(e) => { setFilters((f) => ({ ...f, contexte: e.target.value })); setPage(0) }}>
+              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}>
+                Contexte
+              </label>
+              <select className="input" value={filters.contexte} onChange={(e) => { setFilters((f) => ({ ...f, contexte: e.target.value })); setPage(0) }}>
                 <option value="">Tous</option>
                 {CONTEXTE_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Variant A/B</label>
-              <select className="input w-full" value={filters.variant} onChange={(e) => { setFilters((f) => ({ ...f, variant: e.target.value })); setPage(0) }}>
+              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}>
+                Variant A/B
+              </label>
+              <select className="input" value={filters.variant} onChange={(e) => { setFilters((f) => ({ ...f, variant: e.target.value })); setPage(0) }}>
                 <option value="">Tous</option>
                 <option value="A">A</option>
                 <option value="B">B</option>
@@ -332,131 +403,229 @@ export default function Leads() {
         </div>
       )}
 
-      <div className="card p-0 overflow-hidden">
+      {/* Table */}
+      <div
+        className="rounded-xl overflow-hidden fade-up-1"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+      >
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+          <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+            <thead>
               <tr>
-                {['Vendeur', 'Décideur', 'Score', 'Recommandation', 'Catégorie', 'Statut', 'Séquence', 'Variant', 'Date'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide whitespace-nowrap">
-                    {h}
-                  </th>
+                {['Vendeur', 'Décideur', 'Score', 'Recommandation', 'Catégorie', 'Statut', 'Séq.', 'A/B', 'Date'].map((h) => (
+                  <TH key={h}>{h}</TH>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted">Chargement...</td>
+                  <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: 'var(--text-3)' }}>
+                    Chargement…
+                  </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted">Aucun lead trouvé</td>
+                  <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: 'var(--text-3)' }}>
+                    Aucun lead trouvé
+                  </td>
                 </tr>
-              ) : (
-                rows.map((r) => (
-                  <tr
-                    key={r.seller_id}
-                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedId(r.seller_id)}
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 font-medium text-text max-w-[180px]">
-                        <span className="truncate">{r.amazon_sellers?.seller_name || '—'}</span>
-                        {r.amazon_sellers?.seller_url && (
-                          <a
-                            href={r.amazon_sellers.seller_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-muted hover:text-[#1B3A5C] flex-shrink-0"
-                          >
-                            <ExternalLink size={13} />
-                          </a>
+              ) : rows.map((r, idx) => (
+                <tr
+                  key={r.seller_id}
+                  onClick={() => setSelectedId(r.seller_id)}
+                  style={{
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    background: idx % 2 === 0 ? 'transparent' : 'rgba(120,128,200,0.02)',
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(120,128,200,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(120,128,200,0.02)'}
+                >
+                  {/* Vendeur */}
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    <div className="flex items-center gap-1.5" style={{ maxWidth: '180px' }}>
+                      <span
+                        className="truncate font-medium"
+                        style={{ color: 'var(--text)' }}
+                      >
+                        {r.amazon_sellers?.seller_name || '—'}
+                      </span>
+                      {r.amazon_sellers?.seller_url && (
+                        <a
+                          href={r.amazon_sellers.seller_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: 'var(--text-3)', flexShrink: 0 }}
+                        >
+                          <ExternalLink size={11} />
+                        </a>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Décideur */}
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    {r.decision_maker_name ? (
+                      <div>
+                        <p className="font-medium" style={{ color: 'var(--text)' }}>{r.decision_maker_name}</p>
+                        {r.decision_maker_title && (
+                          <p className="text-xs truncate" style={{ color: 'var(--text-3)', maxWidth: '140px', marginTop: '1px' }}>
+                            {r.decision_maker_title}
+                          </p>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {r.decision_maker_name ? (
+                    ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                  </td>
+
+                  {/* Score */}
+                  <td style={{ padding: '10px 14px' }}>
+                    <ScoreBadge score={r.score_total} />
+                  </td>
+
+                  {/* Reco */}
+                  <td style={{ padding: '10px 14px' }}>
+                    <RecoBadge value={r.recommandation} />
+                  </td>
+
+                  {/* Catégorie */}
+                  <td style={{ padding: '10px 14px' }}>
+                    {(() => {
+                      const catKey = r.amazon_sellers?.category || 'mode'
+                      const cat = getCategory(catKey)
+                      const present = r.amazon_sellers?.present_marketplaces || []
+                      const target  = r.amazon_sellers?.target_marketplaces || []
+                      return (
                         <div>
-                          <p className="font-medium text-text">{r.decision_maker_name}</p>
-                          {r.decision_maker_title && <p className="text-xs text-muted truncate max-w-[140px]">{r.decision_maker_title}</p>}
-                        </div>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3"><ScoreBadge score={r.score_total} /></td>
-                    <td className="px-4 py-3"><RecoBadge value={r.recommandation} /></td>
-                    <td className="px-4 py-3">
-                      {(() => {
-                        const catKey = r.amazon_sellers?.category || 'mode'
-                        const cat = getCategory(catKey)
-                        const present = r.amazon_sellers?.present_marketplaces || []
-                        const target = r.amazon_sellers?.target_marketplaces || []
-                        return (
-                          <div>
-                            <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full whitespace-nowrap font-semibold">
-                              <span>{cat.emoji}</span>
-                              {cat.label}
-                            </span>
-                            {present.length > 0 && (
-                              <MarketplaceChips list={present} color="bg-green-100 text-green-700" />
-                            )}
-                            {present.length === 0 && target.length > 0 && (
-                              <MarketplaceChips list={target} color="bg-slate-50 text-slate-500" />
-                            )}
-                          </div>
-                        )
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={r.statut} /></td>
-                    <td className="px-4 py-3 text-center">
-                      {r.seller_sequence?.sequence_step != null ? (
-                        r.seller_sequence.statut_sequence === 'terminee' ? (
-                          <span className="text-green-600">✓</span>
-                        ) : (
-                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                            {r.seller_sequence.sequence_step}/3
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 7px',
+                            borderRadius: '999px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            background: 'rgba(120,128,200,0.08)',
+                            color: 'var(--text-2)',
+                            border: '1px solid rgba(120,128,200,0.14)',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {cat.emoji} {cat.label}
                           </span>
-                        )
-                      ) : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.ab_variant ? (
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.ab_variant === 'A' ? 'bg-[#1B3A5C]/10 text-[#1B3A5C]' : 'bg-[#E8445A]/10 text-[#E8445A]'}`}>
-                          {r.ab_variant}
+                          {present.length > 0 && (
+                            <MarketplaceChips
+                              list={present}
+                              color={{ background: 'rgba(0,201,123,0.1)', color: '#00C97B', border: '1px solid rgba(0,201,123,0.18)', borderRadius: '4px' }}
+                            />
+                          )}
+                          {present.length === 0 && target.length > 0 && (
+                            <MarketplaceChips
+                              list={target}
+                              color={{ background: 'rgba(120,128,200,0.06)', color: 'var(--text-3)', borderRadius: '4px' }}
+                            />
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </td>
+
+                  {/* Statut */}
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                    <StatusBadge status={r.statut} />
+                  </td>
+
+                  {/* Séquence */}
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    {r.seller_sequence?.sequence_step != null ? (
+                      r.seller_sequence.statut_sequence === 'terminee' ? (
+                        <span style={{ color: '#00C97B', fontSize: '13px' }}>✓</span>
+                      ) : (
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '1px 7px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontFamily: 'DM Mono, monospace',
+                          fontWeight: 500,
+                          background: 'rgba(123,111,255,0.1)',
+                          color: '#7B6FFF',
+                          border: '1px solid rgba(123,111,255,0.2)',
+                        }}>
+                          {r.seller_sequence.sequence_step}/3
                         </span>
-                      ) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-muted text-xs whitespace-nowrap">{fmt(r.enriched_at)}</td>
-                  </tr>
-                ))
-              )}
+                      )
+                    ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                  </td>
+
+                  {/* Variant */}
+                  <td style={{ padding: '10px 14px' }}>
+                    {r.ab_variant ? (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '1px 7px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        fontFamily: 'DM Mono, monospace',
+                        fontWeight: 700,
+                        background: r.ab_variant === 'A' ? 'rgba(123,111,255,0.1)' : 'rgba(255,51,88,0.1)',
+                        color: r.ab_variant === 'A' ? '#7B6FFF' : '#FF3358',
+                        border: r.ab_variant === 'A' ? '1px solid rgba(123,111,255,0.2)' : '1px solid rgba(255,51,88,0.2)',
+                      }}>
+                        {r.ab_variant}
+                      </span>
+                    ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                  </td>
+
+                  {/* Date */}
+                  <td style={{ padding: '10px 14px', color: 'var(--text-3)', fontSize: '12px', whiteSpace: 'nowrap', fontFamily: 'DM Mono, monospace' }}>
+                    {fmt(r.enriched_at)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <p className="text-sm text-muted">
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}
+          >
+            <p className="text-sm" style={{ color: 'var(--text-3)', fontFamily: 'DM Mono, monospace', fontSize: '12px' }}>
               Page {page + 1} / {totalPages} — {total} leads
             </p>
             <div className="flex items-center gap-1">
               <button
                 disabled={page === 0}
                 onClick={() => setPage((p) => p - 1)}
-                className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-lg transition-colors"
+                style={{
+                  color: page === 0 ? 'var(--text-3)' : 'var(--text-2)',
+                  background: 'var(--surface-3)',
+                  border: '1px solid var(--border-strong)',
+                  opacity: page === 0 ? 0.4 : 1,
+                  cursor: page === 0 ? 'not-allowed' : 'pointer',
+                }}
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
               </button>
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => p + 1)}
-                className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-lg transition-colors"
+                style={{
+                  color: page >= totalPages - 1 ? 'var(--text-3)' : 'var(--text-2)',
+                  background: 'var(--surface-3)',
+                  border: '1px solid var(--border-strong)',
+                  opacity: page >= totalPages - 1 ? 0.4 : 1,
+                  cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer',
+                }}
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>

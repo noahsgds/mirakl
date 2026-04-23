@@ -1,14 +1,28 @@
-const STYLES = {
-  QUALIFIE: 'bg-green-100 text-green-700 border border-green-200',
-  A_REVOIR: 'bg-amber-100 text-amber-700 border border-amber-200',
-  REJETE: 'bg-red-100 text-red-600 border border-red-200',
+const RECO_MAP = {
+  QUALIFIE: { bg: 'rgba(0,201,123,0.1)',   color: '#00C97B', border: 'rgba(0,201,123,0.22)' },
+  A_REVOIR: { bg: 'rgba(255,176,32,0.1)',  color: '#FFB020', border: 'rgba(255,176,32,0.22)' },
+  REJETE:   { bg: 'rgba(255,51,88,0.09)',  color: '#FF5577', border: 'rgba(255,51,88,0.2)' },
 }
 
 export default function RecoBadge({ value }) {
-  if (!value) return <span className="text-gray-400 text-xs">—</span>
-  const style = STYLES[value] || 'bg-gray-100 text-gray-600'
+  if (!value) return <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>—</span>
+
+  const s = RECO_MAP[value] || { bg: 'rgba(120,128,200,0.07)', color: '#8890B8', border: 'rgba(120,128,200,0.14)' }
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${style}`}>
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '2px 8px',
+      borderRadius: '999px',
+      fontSize: '11px',
+      fontWeight: 600,
+      fontFamily: 'Outfit, sans-serif',
+      letterSpacing: '0.01em',
+      background: s.bg,
+      color: s.color,
+      border: `1px solid ${s.border}`,
+    }}>
       {value}
     </span>
   )

@@ -21,9 +21,20 @@ function StarRating({ rating }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star key={i} size={14} className={i <= Math.round(rating || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-300 fill-gray-300'} />
+        <Star
+          key={i}
+          size={13}
+          style={{
+            color: i <= Math.round(rating || 0) ? '#FFB020' : '#4C5180',
+            fill: i <= Math.round(rating || 0) ? '#FFB020' : '#4C5180',
+          }}
+        />
       ))}
-      {rating && <span className="text-xs text-muted ml-1">{rating.toFixed(1)}</span>}
+      {rating && (
+        <span className="text-xs ml-1.5" style={{ color: 'var(--text-3)', fontFamily: 'DM Mono, monospace' }}>
+          {rating.toFixed(1)}
+        </span>
+      )}
     </div>
   )
 }
@@ -33,13 +44,30 @@ function fmt(ts) {
   return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+function DrawerSection({ title, children }) {
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+    >
+      <h4
+        className="text-xs font-semibold uppercase tracking-wider mb-3"
+        style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}
+      >
+        {title}
+      </h4>
+      {children}
+    </div>
+  )
+}
+
 export default function LeadDrawer({ sellerId, onClose }) {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData]             = useState(null)
+  const [loading, setLoading]       = useState(true)
   const [relaunching, setRelaunching] = useState(false)
-  const [newStatut, setNewStatut] = useState('')
+  const [newStatut, setNewStatut]   = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
-  const [notes, setNotes] = useState('')
+  const [notes, setNotes]           = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
   const [changingStatus, setChangingStatus] = useState(false)
@@ -99,37 +127,87 @@ export default function LeadDrawer({ sellerId, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-          <h2 className="font-semibold text-text text-lg">Fiche lead</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <X size={20} className="text-muted" />
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose}
+      />
+
+      {/* Drawer panel */}
+      <div
+        className="relative w-full max-w-2xl flex flex-col overflow-y-auto"
+        style={{
+          background: 'var(--surface)',
+          borderLeft: '1px solid var(--border-strong)',
+          boxShadow: '-24px 0 64px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Sticky Header */}
+        <div
+          className="sticky top-0 z-10 flex items-center justify-between px-6 py-4"
+          style={{
+            background: 'var(--surface)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <h2 style={{
+            fontFamily: 'Fraunces, Georgia, serif',
+            fontSize: '17px',
+            fontWeight: 700,
+            letterSpacing: '-0.015em',
+            color: 'var(--text)',
+          }}>
+            Fiche lead
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+          >
+            <X size={16} />
           </button>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-muted">Chargement...</div>
+          <div className="flex-1 flex items-center justify-center gap-3" style={{ color: 'var(--text-3)' }}>
+            <div className="w-3.5 h-3.5 rounded-full live-dot" style={{ background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }} />
+            <span className="text-sm">Chargement…</span>
+          </div>
         ) : !data ? (
-          <div className="flex-1 flex items-center justify-center text-muted">Lead introuvable</div>
+          <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--text-3)' }}>
+            Lead introuvable
+          </div>
         ) : (
-          <div className="flex-1 p-6 space-y-6">
-            {/* 1. En-tête + statut modifiable */}
+          <div className="flex-1 p-6 space-y-4">
+
+            {/* 1. Header */}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold text-text">
+                  <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)' }}>
                     {data.amazon_sellers?.seller_name || 'Vendeur inconnu'}
                   </h3>
                   {data.amazon_sellers?.seller_url && (
-                    <a href={data.amazon_sellers.seller_url} target="_blank" rel="noreferrer" className="text-muted hover:text-[#1B3A5C]">
-                      <ExternalLink size={16} />
+                    <a href={data.amazon_sellers.seller_url} target="_blank" rel="noreferrer" style={{ color: 'var(--text-3)' }}>
+                      <ExternalLink size={14} />
                     </a>
                   )}
                 </div>
                 {data.amazon_sellers?.categories && (
-                  <span className="inline-block mt-1 text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                  <span style={{
+                    display: 'inline-block',
+                    marginTop: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '1px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(120,128,200,0.08)',
+                    color: 'var(--text-2)',
+                    border: '1px solid rgba(120,128,200,0.14)',
+                  }}>
                     {data.amazon_sellers.categories}
                   </span>
                 )}
@@ -138,26 +216,39 @@ export default function LeadDrawer({ sellerId, onClose }) {
                 </div>
               </div>
 
-              {/* Statut modifiable */}
+              {/* Statut dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setStatusOpen((v) => !v)}
                   disabled={changingStatus}
-                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity disabled:opacity-50"
+                  className="flex items-center gap-1.5 transition-opacity disabled:opacity-50"
                 >
                   <StatusBadge status={data.statut} />
-                  <ChevronDown size={14} className={`text-muted transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    size={12}
+                    style={{ color: 'var(--text-3)', transform: statusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                  />
                 </button>
                 {statusOpen && (
-                  <div className="absolute right-0 top-8 w-52 bg-white rounded-xl shadow-2xl border border-gray-100 z-20 py-1 max-h-72 overflow-y-auto">
+                  <div
+                    className="absolute right-0 top-8 w-52 z-20 rounded-xl overflow-hidden py-1 max-h-72 overflow-y-auto"
+                    style={{
+                      background: 'var(--surface-3)',
+                      border: '1px solid var(--border-strong)',
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+                    }}
+                  >
                     {ALL_STATUTS.map((s) => (
                       <button
                         key={s}
                         onClick={() => handleStatusChange(s)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 ${s === data.statut ? 'bg-gray-50' : ''}`}
+                        className="w-full text-left px-3 py-2 flex items-center gap-2 transition-colors"
+                        style={{ background: s === data.statut ? 'rgba(120,128,200,0.08)' : 'transparent' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(120,128,200,0.06)'}
+                        onMouseLeave={e => e.currentTarget.style.background = s === data.statut ? 'rgba(120,128,200,0.08)' : 'transparent'}
                       >
                         <StatusBadge status={s} />
-                        {s === data.statut && <CheckCircle2 size={12} className="ml-auto text-green-500" />}
+                        {s === data.statut && <CheckCircle2 size={11} className="ml-auto" style={{ color: '#00C97B' }} />}
                       </button>
                     ))}
                   </div>
@@ -167,207 +258,308 @@ export default function LeadDrawer({ sellerId, onClose }) {
 
             {/* Error banner */}
             {data.error_reason && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertTriangle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+              <div
+                className="rounded-xl p-4 flex items-start gap-3"
+                style={{ background: 'rgba(255,51,88,0.07)', border: '1px solid rgba(255,51,88,0.18)' }}
+              >
+                <AlertTriangle size={15} style={{ color: '#FF3358', flexShrink: 0, marginTop: '1px' }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-red-700">Erreur détectée</p>
-                  <p className="text-sm text-red-600 mt-0.5">{data.error_reason}</p>
+                  <p className="text-sm font-medium" style={{ color: '#FF3358' }}>Erreur détectée</p>
+                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>{data.error_reason}</p>
                 </div>
                 <button
                   onClick={handleRelaunch}
                   disabled={relaunching}
-                  className="flex-shrink-0 flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                  className="flex-shrink-0 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    background: 'rgba(255,51,88,0.15)',
+                    color: '#FF3358',
+                    border: '1px solid rgba(255,51,88,0.28)',
+                  }}
                 >
-                  <RefreshCw size={12} className={relaunching ? 'animate-spin' : ''} />
+                  <RefreshCw size={11} className={relaunching ? 'animate-spin' : ''} />
                   Relancer
                 </button>
               </div>
             )}
 
             {/* 2. Scoring */}
-            <div className="card">
-              <h4 className="text-sm font-semibold text-text mb-3">Scoring IA</h4>
+            <DrawerSection title="Scoring IA">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div
+                  className="flex-1 rounded-full overflow-hidden"
+                  style={{ height: '6px', background: 'rgba(120,128,200,0.12)' }}
+                >
                   <div
-                    className="h-3 rounded-full transition-all"
                     style={{
+                      height: '100%',
                       width: `${data.score_total || 0}%`,
-                      background: (data.score_total || 0) >= 70 ? '#16a34a' : (data.score_total || 0) >= 50 ? '#f59e0b' : '#e8445a',
+                      borderRadius: '999px',
+                      background: (data.score_total || 0) >= 70 ? '#00C97B' : (data.score_total || 0) >= 50 ? '#FFB020' : '#FF3358',
+                      boxShadow: `0 0 8px ${(data.score_total || 0) >= 70 ? 'rgba(0,201,123,0.4)' : (data.score_total || 0) >= 50 ? 'rgba(255,176,32,0.4)' : 'rgba(255,51,88,0.4)'}`,
+                      transition: 'width 0.5s ease',
                     }}
                   />
                 </div>
                 <ScoreBadge score={data.score_total} />
               </div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 flex-wrap mb-3">
                 <RecoBadge value={data.recommandation} />
                 {data.contexte_detecte && (
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{data.contexte_detecte}</span>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '1px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(120,128,200,0.08)',
+                    color: 'var(--text-2)',
+                    border: '1px solid rgba(120,128,200,0.14)',
+                  }}>
+                    {data.contexte_detecte}
+                  </span>
                 )}
               </div>
               {data.insight_principal && (
-                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                  <p className="text-xs font-medium text-blue-700 mb-0.5">Insight principal</p>
-                  <p className="text-sm text-blue-800">{data.insight_principal}</p>
+                <div
+                  className="rounded-lg p-3 mt-2"
+                  style={{ background: 'rgba(123,111,255,0.07)', border: '1px solid rgba(123,111,255,0.15)' }}
+                >
+                  <p className="text-xs font-semibold mb-1" style={{ color: '#7B6FFF' }}>Insight principal</p>
+                  <p className="text-sm" style={{ color: 'var(--text-2)' }}>{data.insight_principal}</p>
                 </div>
               )}
               {data.angle_approche && (
-                <p className="text-sm text-muted mt-2">
-                  <span className="font-medium">Angle :</span> {data.angle_approche}
+                <p className="text-sm mt-2" style={{ color: 'var(--text-3)' }}>
+                  <span className="font-medium" style={{ color: 'var(--text-2)' }}>Angle :</span> {data.angle_approche}
                 </p>
               )}
-            </div>
+            </DrawerSection>
 
             {/* 3. Décideur */}
-            <div className="card">
-              <h4 className="text-sm font-semibold text-text mb-3">Contact décideur</h4>
+            <DrawerSection title="Contact décideur">
               {data.decision_maker_name ? (
                 <div className="space-y-2">
                   <div>
-                    <p className="font-medium text-text">{data.decision_maker_name}</p>
-                    {data.decision_maker_title && <p className="text-sm text-muted">{data.decision_maker_title}</p>}
+                    <p className="font-medium" style={{ color: 'var(--text)' }}>{data.decision_maker_name}</p>
+                    {data.decision_maker_title && (
+                      <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>{data.decision_maker_title}</p>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2.5">
                     {data.decision_maker_email && (
-                      <a href={`mailto:${data.decision_maker_email}`} className="flex items-center gap-1.5 text-sm text-[#1B3A5C] hover:underline">
-                        <Mail size={14} /> {data.decision_maker_email}
+                      <a
+                        href={`mailto:${data.decision_maker_email}`}
+                        className="flex items-center gap-1.5 text-sm transition-colors"
+                        style={{ color: 'var(--text-2)' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#7B6FFF'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-2)'}
+                      >
+                        <Mail size={13} /> {data.decision_maker_email}
                       </a>
                     )}
                     {data.decision_maker_linkedin && (
-                      <a href={data.decision_maker_linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-                        <Linkedin size={14} /> LinkedIn
+                      <a
+                        href={data.decision_maker_linkedin}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 text-sm"
+                        style={{ color: '#7B6FFF' }}
+                      >
+                        <Linkedin size={13} /> LinkedIn
                       </a>
                     )}
                   </div>
                   {data.enriched_source && (
-                    <span className="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{data.enriched_source}</span>
+                    <span style={{
+                      display: 'inline-block',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '1px 8px',
+                      borderRadius: '999px',
+                      background: 'rgba(192,132,252,0.1)',
+                      color: '#C084FC',
+                      border: '1px solid rgba(192,132,252,0.2)',
+                    }}>
+                      {data.enriched_source}
+                    </span>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted">Décideur non encore enrichi</p>
+                <p className="text-sm" style={{ color: 'var(--text-3)' }}>Décideur non encore enrichi</p>
               )}
-            </div>
+            </DrawerSection>
 
             {/* 4. Notes */}
-            <div className="card">
-              <h4 className="text-sm font-semibold text-text mb-3">Notes internes</h4>
+            <DrawerSection title="Notes internes">
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ajouter une note sur ce lead (appel prévu, contexte, objections...)"
-                className="input w-full min-h-[100px] resize-y text-sm"
+                placeholder="Ajouter une note sur ce lead (appel prévu, contexte, objections…)"
+                className="input"
+                style={{ minHeight: '90px', resize: 'vertical', fontSize: '13px', lineHeight: '1.5' }}
               />
               <div className="flex justify-end mt-2">
                 <button
                   onClick={handleSaveNotes}
                   disabled={savingNotes}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${notesSaved ? 'bg-green-600 text-white' : 'bg-[#1B3A5C] text-white hover:bg-[#15304e]'} disabled:opacity-50`}
+                  className="flex items-center gap-1.5 transition-all disabled:opacity-50"
+                  style={{
+                    padding: '5px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    fontFamily: 'Outfit, sans-serif',
+                    background: notesSaved ? 'rgba(0,201,123,0.12)' : 'rgba(255,51,88,0.12)',
+                    color: notesSaved ? '#00C97B' : '#FF3358',
+                    border: notesSaved ? '1px solid rgba(0,201,123,0.25)' : '1px solid rgba(255,51,88,0.25)',
+                  }}
                 >
                   {notesSaved ? <CheckCircle2 size={12} /> : <Save size={12} />}
-                  {notesSaved ? 'Sauvegardé !' : savingNotes ? 'Sauvegarde...' : 'Sauvegarder'}
+                  {notesSaved ? 'Sauvegardé !' : savingNotes ? 'Sauvegarde…' : 'Sauvegarder'}
                 </button>
               </div>
-            </div>
+            </DrawerSection>
 
             {/* 5. Emails générés */}
             {data.seller_emails && (
-              <div className="card">
-                <h4 className="text-sm font-semibold text-text mb-3">Emails générés</h4>
+              <DrawerSection title="Emails générés">
                 <EmailPreview emails={data.seller_emails} />
-              </div>
+              </DrawerSection>
             )}
 
             {/* 6. Timeline séquence */}
             {data.seller_sequence && (
-              <div className="card">
-                <h4 className="text-sm font-semibold text-text mb-3">Timeline séquence</h4>
-                <div className="space-y-2">
+              <DrawerSection title="Timeline séquence">
+                <div className="space-y-2.5">
                   {[
-                    { label: 'J0', date: data.seller_sequence.mail1_sent_at },
+                    { label: 'J0',  date: data.seller_sequence.mail1_sent_at },
                     { label: 'J+3', date: data.seller_sequence.mail2_sent_at },
                     { label: 'J+6', date: data.seller_sequence.mail3_sent_at },
                   ].map(({ label, date }) => (
                     <div key={label} className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${date ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                        {date ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: date ? 'rgba(0,201,123,0.12)' : 'rgba(120,128,200,0.08)',
+                          border: date ? '1px solid rgba(0,201,123,0.25)' : '1px solid rgba(120,128,200,0.14)',
+                        }}
+                      >
+                        {date
+                          ? <CheckCircle2 size={12} style={{ color: '#00C97B' }} />
+                          : <Clock size={12} style={{ color: 'var(--text-3)' }} />
+                        }
                       </div>
-                      <span className="text-sm font-medium text-text">{label}</span>
-                      <span className="text-sm text-muted">{fmt(date)}</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text-2)', fontFamily: 'DM Mono, monospace', minWidth: '32px' }}>{label}</span>
+                      <span className="text-sm" style={{ color: 'var(--text-3)', fontFamily: 'DM Mono, monospace' }}>{fmt(date)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {data.seller_sequence.opened_count > 0 && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{data.seller_sequence.opened_count} ouverture(s)</span>}
-                  {data.seller_sequence.clicked_count > 0 && <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">{data.seller_sequence.clicked_count} clic(s)</span>}
-                  {data.seller_sequence.replied && <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">Répondu</span>}
-                  {data.seller_sequence.bounced && <span className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">Bounced</span>}
-                  {data.seller_sequence.unsubscribed && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Désabonné</span>}
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {data.seller_sequence.opened_count > 0 && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(123,111,255,0.1)', color: '#7B6FFF', border: '1px solid rgba(123,111,255,0.2)' }}>
+                      {data.seller_sequence.opened_count} ouverture(s)
+                    </span>
+                  )}
+                  {data.seller_sequence.clicked_count > 0 && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(0,224,192,0.08)', color: '#00E0C0', border: '1px solid rgba(0,224,192,0.18)' }}>
+                      {data.seller_sequence.clicked_count} clic(s)
+                    </span>
+                  )}
+                  {data.seller_sequence.replied && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(0,201,123,0.1)', color: '#00C97B', border: '1px solid rgba(0,201,123,0.2)' }}>
+                      Répondu
+                    </span>
+                  )}
+                  {data.seller_sequence.bounced && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(255,138,50,0.1)', color: '#FF8A32', border: '1px solid rgba(255,138,50,0.2)' }}>
+                      Bounced
+                    </span>
+                  )}
+                  {data.seller_sequence.unsubscribed && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(76,81,128,0.1)', color: '#8890B8', border: '1px solid rgba(76,81,128,0.2)' }}>
+                      Désabonné
+                    </span>
+                  )}
                 </div>
-              </div>
+              </DrawerSection>
             )}
 
             {/* 7. Marketplaces */}
             {data.amazon_sellers && (data.amazon_sellers.target_marketplaces?.length > 0 || data.amazon_sellers.present_marketplaces?.length > 0) && (
-              <div className="card space-y-4">
-                <h4 className="text-sm font-semibold text-text">Marketplaces</h4>
-
+              <DrawerSection title="Marketplaces">
                 {data.amazon_sellers.target_marketplaces?.length > 0 && (
-                  <div>
+                  <div className="mb-3">
                     <div className="flex items-center gap-1.5 mb-2">
-                      <Target size={13} className="text-[#E8445A]" />
-                      <p className="text-xs font-semibold text-muted uppercase">Cibles Mirakl ({data.amazon_sellers.target_marketplaces.length})</p>
+                      <Target size={12} style={{ color: '#FF3358' }} />
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)', letterSpacing: '0.08em' }}>
+                        Cibles Mirakl ({data.amazon_sellers.target_marketplaces.length})
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {data.amazon_sellers.target_marketplaces.map((m) => (
-                        <span key={m} className="text-xs bg-[#E8445A]/10 text-[#E8445A] border border-[#E8445A]/20 px-2 py-0.5 rounded-full font-medium">
+                        <span key={m} style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(255,51,88,0.08)', color: '#FF3358', border: '1px solid rgba(255,51,88,0.18)' }}>
                           {m}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
-
                 {data.amazon_sellers.present_marketplaces?.length > 0 && (
                   <div>
                     <div className="flex items-center gap-1.5 mb-2">
-                      <ShoppingBag size={13} className="text-green-600" />
-                      <p className="text-xs font-semibold text-muted uppercase">Déjà présent sur ({data.amazon_sellers.present_marketplaces.length})</p>
+                      <ShoppingBag size={12} style={{ color: '#00C97B' }} />
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)', letterSpacing: '0.08em' }}>
+                        Déjà présent ({data.amazon_sellers.present_marketplaces.length})
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {data.amazon_sellers.present_marketplaces.map((m) => (
-                        <span key={m} className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">
+                        <span key={m} style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(0,201,123,0.1)', color: '#00C97B', border: '1px solid rgba(0,201,123,0.2)' }}>
                           ✓ {m}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
-              </div>
+              </DrawerSection>
             )}
 
-            {/* 8. Données Amazon */}
+            {/* 8. Amazon data */}
             {data.amazon_sellers && (
-              <div className="card">
-                <h4 className="text-sm font-semibold text-text mb-3">Données Amazon</h4>
+              <DrawerSection title="Données Amazon">
                 {data.amazon_sellers.category && (() => {
                   const cat = getCategory(data.amazon_sellers.category)
                   return (
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-lg">{cat.emoji}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cat.bg} ${cat.text} ${cat.border}`}>
+                      <span style={{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px', background: 'rgba(120,128,200,0.08)', color: 'var(--text-2)', border: '1px solid rgba(120,128,200,0.14)' }}>
                         {cat.label}
                       </span>
                     </div>
                   )
                 })()}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted">Produits</span><p className="font-medium">{data.amazon_sellers.nb_products?.toLocaleString() || '—'}</p></div>
-                  <div><span className="text-muted">Avis</span><p className="font-medium">{data.amazon_sellers.nb_reviews?.toLocaleString() || '—'}</p></div>
-                  <div><span className="text-muted">Prix moyen</span><p className="font-medium">{data.amazon_sellers.avg_price ? `${data.amazon_sellers.avg_price.toFixed(2)} €` : '—'}</p></div>
-                  <div><span className="text-muted">Note</span><p className="font-medium">{data.amazon_sellers.rating || '—'} / 5</p></div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Produits',    value: data.amazon_sellers.nb_products?.toLocaleString() },
+                    { label: 'Avis',        value: data.amazon_sellers.nb_reviews?.toLocaleString() },
+                    { label: 'Prix moyen',  value: data.amazon_sellers.avg_price ? `${data.amazon_sellers.avg_price.toFixed(2)} €` : null },
+                    { label: 'Note',        value: data.amazon_sellers.rating ? `${data.amazon_sellers.rating} / 5` : null },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>{label}</p>
+                      <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text)', fontFamily: 'DM Mono, monospace' }}>
+                        {value || '—'}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </DrawerSection>
             )}
+
           </div>
         )}
       </div>

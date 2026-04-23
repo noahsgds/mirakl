@@ -7,7 +7,6 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-/* ─── Nav definitions ────────────────────────────────── */
 const GLOBAL_NAV = [
   { to: '/',           label: 'Vue globale',  icon: Globe },
 ]
@@ -33,11 +32,10 @@ const C2_NAV = [
   { to: '/c2/campagne',  label: 'Campagne',    icon: Settings },
 ]
 
-/* ─── Campaign tabs ──────────────────────────────────── */
 const CAMPAIGNS = [
-  { key: 'global', label: 'Globale', shortLabel: 'Globale', color: 'text-white', activeColor: '#E8445A' },
-  { key: 'c1',     label: 'Amazon FR', shortLabel: 'C1',    color: 'text-white', activeColor: '#E8445A' },
-  { key: 'c2',     label: 'Campagne 2', shortLabel: 'C2',   color: 'text-white', activeColor: '#2563EB' },
+  { key: 'global', label: 'Globale', short: 'All', to: '/' },
+  { key: 'c1',     label: 'Amazon FR', short: 'C1',  to: '/dashboard' },
+  { key: 'c2',     label: 'Campagne 2', short: 'C2', to: '/c2' },
 ]
 
 function detectCampaign(pathname) {
@@ -52,8 +50,7 @@ function getNav(campaign) {
   return C1_NAV
 }
 
-/* ─── Notification Bell ──────────────────────────────── */
-function NotificationBell() {
+function NotificationBell({ accentColor }) {
   const [notifs, setNotifs] = useState([])
   const [open, setOpen]     = useState(false)
   const ref = useRef(null)
@@ -85,36 +82,84 @@ function NotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((v) => !v)} className="relative p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-        <Bell size={18} className="text-white/70" />
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="relative p-1.5 rounded-lg transition-all duration-200"
+        style={{ background: open ? 'rgba(120,128,200,0.1)' : 'transparent' }}
+      >
+        <Bell size={15} style={{ color: 'var(--text-3)' }} />
         {notifs.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E8445A] rounded-full text-white text-[9px] font-bold flex items-center justify-center">
+          <span
+            className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full text-white flex items-center justify-center"
+            style={{
+              background: 'var(--accent)',
+              fontSize: '8px',
+              fontWeight: 700,
+              boxShadow: '0 0 8px rgba(255,51,88,0.5)',
+            }}
+          >
             {notifs.length > 9 ? '9+' : notifs.length}
           </span>
         )}
       </button>
+
       {open && (
-        <div className="absolute right-0 top-9 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <p className="text-sm font-semibold text-text">Notifications</p>
+        <div
+          className="absolute right-0 top-9 w-72 z-50 overflow-hidden rounded-xl"
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-strong)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(120,128,200,0.06)',
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderBottom: '1px solid var(--border)' }}
+          >
+            <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Notifications</p>
             {notifs.length > 0 && (
-              <button onClick={() => setNotifs([])} className="text-xs text-muted hover:text-text">Tout effacer</button>
+              <button
+                onClick={() => setNotifs([])}
+                className="text-xs transition-colors"
+                style={{ color: 'var(--text-3)' }}
+              >
+                Tout effacer
+              </button>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifs.length === 0 ? (
-              <div className="px-4 py-8 text-center text-muted text-sm">Aucune notification</div>
+              <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>
+                Aucune notification
+              </div>
             ) : notifs.map((n, i) => (
-              <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'HOT' ? 'bg-red-100' : 'bg-green-100'}`}>
-                  {n.type === 'HOT' ? <Flame size={14} className="text-[#E8445A]" /> : <MessageSquare size={14} className="text-green-600" />}
+              <div
+                key={i}
+                className="flex items-start gap-3 px-4 py-3"
+                style={{ borderBottom: '1px solid var(--border)' }}
+              >
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: n.type === 'HOT' ? 'rgba(255,51,88,0.12)' : 'rgba(0,224,192,0.1)',
+                  }}
+                >
+                  {n.type === 'HOT'
+                    ? <Flame size={13} style={{ color: 'var(--accent)' }} />
+                    : <MessageSquare size={13} style={{ color: 'var(--teal)' }} />
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text">{n.label}</p>
-                  <p className="text-xs text-muted">{n.ts.toLocaleTimeString('fr-FR')}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{n.label}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                    {n.ts.toLocaleTimeString('fr-FR')}
+                  </p>
                 </div>
-                <button onClick={() => setNotifs((prev) => prev.filter((_, j) => j !== i))} className="text-muted hover:text-text">
-                  <X size={14} />
+                <button
+                  onClick={() => setNotifs((prev) => prev.filter((_, j) => j !== i))}
+                  style={{ color: 'var(--text-3)' }}
+                >
+                  <X size={12} />
                 </button>
               </div>
             ))}
@@ -125,94 +170,169 @@ function NotificationBell() {
   )
 }
 
-/* ─── Layout ──────────────────────────────────────────── */
 export default function Layout({ children }) {
   const { pathname } = useLocation()
   const navigate     = useNavigate()
   const campaign     = detectCampaign(pathname)
   const nav          = getNav(campaign)
   const isC2         = campaign === 'c2'
-
-  const accentColor  = isC2 ? '#2563EB' : '#E8445A'
-  const campaignLabel = campaign === 'global' ? 'Vue Globale' : campaign === 'c2' ? 'Campagne 2' : 'Amazon FR'
+  const accentColor  = isC2 ? '#7B6FFF' : '#FF3358'
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-60 flex-shrink-0 flex flex-col" style={{ background: '#1B3A5C' }}>
+    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+
+      {/* Sidebar */}
+      <aside
+        className="w-52 flex-shrink-0 flex flex-col relative"
+        style={{
+          background: 'var(--sidebar)',
+          borderRight: '1px solid var(--border)',
+        }}
+      >
+        {/* Left accent glow strip */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
+          style={{
+            background: `linear-gradient(to bottom, transparent 0%, ${accentColor}50 35%, ${accentColor}50 65%, transparent 100%)`,
+          }}
+        />
 
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-white/10">
+        <div className="px-4 pt-4 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: accentColor }}>
-                {isC2 ? <Target size={16} className="text-white" /> : <Zap size={16} className="text-white" fill="white" />}
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: accentColor + '16',
+                  border: `1px solid ${accentColor}30`,
+                  boxShadow: `0 0 10px ${accentColor}18`,
+                }}
+              >
+                {isC2
+                  ? <Target size={13} style={{ color: accentColor }} />
+                  : <Zap size={13} style={{ color: accentColor }} fill={accentColor} />
+                }
               </div>
               <div>
-                <p className="text-white font-bold text-sm leading-tight">Mirakl Connect</p>
-                <p className="text-white/50 text-xs">{campaignLabel}</p>
+                <p
+                  className="leading-tight"
+                  style={{
+                    fontFamily: 'Fraunces, Georgia, serif',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: 'var(--text)',
+                  }}
+                >
+                  Mirakl
+                </p>
+                <p
+                  className="uppercase tracking-widest"
+                  style={{ fontSize: '8px', fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.14em' }}
+                >
+                  Connect
+                </p>
               </div>
             </div>
-            <NotificationBell />
+            <NotificationBell accentColor={accentColor} />
           </div>
         </div>
 
         {/* Campaign tabs */}
-        <div className="flex border-b border-white/10">
-          {CAMPAIGNS.map(({ key, shortLabel }) => {
-            const active = campaign === key
-            const to = key === 'global' ? '/' : key === 'c2' ? '/c2' : '/dashboard'
-            return (
-              <button
-                key={key}
-                onClick={() => navigate(to)}
-                className={`flex-1 py-2 text-xs font-semibold transition-colors ${
-                  active
-                    ? 'text-white border-b-2'
-                    : 'text-white/35 hover:text-white/60'
-                }`}
-                style={active ? { borderBottomColor: accentColor } : {}}
-              >
-                {shortLabel}
-              </button>
-            )
-          })}
+        <div className="px-3 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex gap-1">
+            {CAMPAIGNS.map(({ key, short, to }) => {
+              const active = campaign === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => navigate(to)}
+                  className="flex-1 py-1.5 text-[10px] font-semibold rounded-md tracking-wider uppercase transition-all duration-200"
+                  style={active ? {
+                    background: accentColor + '15',
+                    color: accentColor,
+                    border: `1px solid ${accentColor}28`,
+                  } : {
+                    color: 'var(--text-3)',
+                    border: '1px solid transparent',
+                    background: 'transparent',
+                  }}
+                >
+                  {short}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {/* Nav links */}
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/' || to === '/c2' || to === '/dashboard'}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/8'
-                }`
-              }
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '9px',
+                padding: '8px 10px 8px 10px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: isActive ? 500 : 400,
+                fontFamily: 'Outfit, sans-serif',
+                color: isActive ? 'var(--text)' : 'var(--text-3)',
+                background: isActive ? (accentColor + '10') : 'transparent',
+                borderLeft: `2px solid ${isActive ? accentColor : 'transparent'}`,
+                paddingLeft: '8px',
+                transition: 'all 0.15s ease',
+                textDecoration: 'none',
+              })}
+              className="nav-link-item"
             >
-              <Icon size={18} />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    size={14}
+                    style={{
+                      color: isActive ? accentColor : 'var(--text-3)',
+                      flexShrink: 0,
+                      transition: 'color 0.15s',
+                    }}
+                  />
+                  <span>{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-white/10">
+        <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
           {isC2 ? (
             <>
-              <p className="text-white/30 text-xs">Campagne 2 · Setup en cours</p>
-              <p className="text-white/20 text-xs">Connecter vos tables →</p>
+              <p style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-3)', letterSpacing: '0.02em' }}>
+                Campagne 2 · Setup en cours
+              </p>
+              <p style={{ fontSize: '10px', marginTop: '2px', color: accentColor + '70' }}>
+                Connecter vos tables →
+              </p>
             </>
           ) : (
             <>
-              <p className="text-white/30 text-xs">Amazon FR → 8 marketplaces</p>
-              <p className="text-white/20 text-xs">Mode · Beauté · Maison · Sport · +4</p>
+              <p style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-3)', letterSpacing: '0.02em' }}>
+                Amazon FR · 8 marketplaces
+              </p>
+              <p style={{ fontSize: '10px', marginTop: '2px', color: 'var(--text-3)' }}>
+                Mode · Beauté · Maison · +5
+              </p>
             </>
           )}
         </div>
       </aside>
 
+      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>

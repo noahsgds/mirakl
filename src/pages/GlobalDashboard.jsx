@@ -1,17 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Zap, ArrowRight, Users, GitBranch, Mail, BarChart2,
-  TrendingUp, Target, CheckCircle2, Circle, Activity, Flame, MessageSquare,
+  Zap, ArrowRight, Users, Mail, TrendingUp, Target,
+  CheckCircle2, Circle, Activity, Flame, MessageSquare,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-function StatCard({ label, value, sub, color = 'text-white', bg = 'bg-white/5' }) {
+function StatTile({ label, value, color = '#E2E5F6' }) {
   return (
-    <div className={`${bg} rounded-xl p-4 border border-white/8`}>
-      <p className={`text-2xl font-bold ${color}`}>{value ?? '…'}</p>
-      <p className="text-white/60 text-xs font-medium mt-0.5">{label}</p>
-      {sub && <p className="text-white/30 text-[10px] mt-1">{sub}</p>}
+    <div
+      className="rounded-lg p-3 text-center"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <p style={{
+        fontFamily: 'DM Mono, monospace',
+        fontSize: '1.25rem',
+        fontWeight: 500,
+        letterSpacing: '-0.04em',
+        color,
+        lineHeight: 1,
+      }}>
+        {value ?? '…'}
+      </p>
+      <p style={{ fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.25)', marginTop: '4px', letterSpacing: '0.04em' }}>
+        {label}
+      </p>
     </div>
   )
 }
@@ -20,16 +33,39 @@ function FunnelBar({ label, value, max, color }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
     <div className="flex items-center gap-3">
-      <div className="w-24 text-right text-xs text-white/40 font-medium shrink-0">{label}</div>
-      <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
-        <div
-          className={`h-full rounded-full ${color} flex items-center px-2 transition-all duration-700`}
-          style={{ width: `${Math.max(pct, 2)}%` }}
-        >
-          {pct > 8 && <span className="text-white text-[10px] font-bold">{value}</span>}
-        </div>
+      <div
+        className="shrink-0 text-right"
+        style={{ width: '80px', fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontFamily: 'Outfit, sans-serif' }}
+      >
+        {label}
       </div>
-      {pct <= 8 && <span className="text-white/50 text-xs font-bold w-8">{value}</span>}
+      <div
+        className="flex-1 rounded-full overflow-hidden"
+        style={{ height: '6px', background: 'rgba(255,255,255,0.06)' }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${Math.max(pct, 1)}%`,
+            background: color,
+            borderRadius: '999px',
+            boxShadow: `0 0 8px ${color}60`,
+            transition: 'width 0.7s ease',
+          }}
+        />
+      </div>
+      <span
+        style={{
+          width: '36px',
+          fontSize: '11px',
+          fontFamily: 'DM Mono, monospace',
+          fontWeight: 500,
+          color: 'rgba(255,255,255,0.5)',
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </span>
     </div>
   )
 }
@@ -61,87 +97,153 @@ export default function GlobalDashboard() {
   const fmt = (n) => n == null ? '…' : n.toLocaleString('fr-FR')
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-5xl">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="fade-up flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Vue globale</h1>
-          <p className="text-muted text-sm mt-0.5">Toutes les campagnes · Métriques consolidées</p>
+          <h1 style={{
+            fontFamily: 'Fraunces, Georgia, serif',
+            fontSize: '2rem',
+            fontWeight: 700,
+            letterSpacing: '-0.025em',
+            color: 'var(--text)',
+            lineHeight: 1.1,
+          }}>
+            Vue globale
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>
+            Toutes les campagnes · Métriques consolidées
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-muted font-medium">Live</span>
+          <div
+            className="w-2 h-2 rounded-full live-dot"
+            style={{ background: '#00C97B', boxShadow: '0 0 6px rgba(0,201,123,0.6)' }}
+          />
+          <span className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Live</span>
         </div>
       </div>
 
       {/* Campaign cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 fade-up-1">
 
-        {/* Campaign 1 */}
-        <div className="rounded-2xl overflow-hidden border border-[#E8445A]/20"
-          style={{ background: 'linear-gradient(135deg, #1B3A5C 0%, #0F2238 100%)' }}>
-          <div className="px-6 pt-6 pb-4">
+        {/* Campaign 1 — Amazon FR */}
+        <div
+          className="rounded-2xl overflow-hidden relative"
+          style={{
+            background: 'linear-gradient(135deg, #0F1520 0%, #090C15 100%)',
+            border: '1px solid rgba(255,51,88,0.15)',
+            boxShadow: '0 0 40px rgba(255,51,88,0.04)',
+          }}
+        >
+          {/* Ambient glow */}
+          <div
+            className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(255,51,88,0.06) 0%, transparent 70%)' }}
+          />
+
+          <div className="relative px-6 pt-6 pb-5">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#E8445A] flex items-center justify-center shadow-lg shadow-red-500/30">
-                  <Zap size={18} className="text-white" fill="white" />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: 'rgba(255,51,88,0.15)',
+                    border: '1px solid rgba(255,51,88,0.28)',
+                    boxShadow: '0 0 16px rgba(255,51,88,0.2)',
+                  }}
+                >
+                  <Zap size={17} style={{ color: '#FF3358' }} fill="#FF3358" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">Amazon FR → Mirakl</p>
-                  <p className="text-white/40 text-xs">Scraping · Scoring · Email</p>
+                  <p className="font-semibold text-sm" style={{ color: 'rgba(255,255,255,0.9)' }}>Amazon FR → Mirakl</p>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '1px' }}>Scraping · Scoring · Email</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 bg-green-500/15 border border-green-500/20 px-2 py-0.5 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-green-400 text-[11px] font-semibold">Active</span>
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                style={{ background: 'rgba(0,201,123,0.12)', border: '1px solid rgba(0,201,123,0.22)' }}
+              >
+                <div
+                  className="w-1.5 h-1.5 rounded-full live-dot"
+                  style={{ background: '#00C97B', boxShadow: '0 0 5px rgba(0,201,123,0.6)' }}
+                />
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#00C97B', letterSpacing: '0.05em' }}>ACTIVE</span>
               </div>
             </div>
 
+            {/* Stats grid */}
             <div className="grid grid-cols-4 gap-2 mb-5">
-              {[
-                { label: 'Total', value: fmt(c1?.total),    color: 'text-white' },
-                { label: 'À scorer', value: fmt(c1?.a_scorer), color: 'text-amber-400' },
-                { label: 'Enrichis', value: fmt(c1?.enriched), color: 'text-purple-400' },
-                { label: 'Séquence', value: fmt(c1?.sequence), color: 'text-blue-400' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-white/5 rounded-lg p-2.5 border border-white/5 text-center">
-                  <p className={`text-lg font-bold ${color}`}>{value}</p>
-                  <p className="text-white/30 text-[10px] mt-0.5">{label}</p>
-                </div>
-              ))}
+              <StatTile label="Total"    value={fmt(c1?.total)}    color="rgba(255,255,255,0.9)" />
+              <StatTile label="À scorer" value={fmt(c1?.a_scorer)} color="#FFB020" />
+              <StatTile label="Enrichis" value={fmt(c1?.enriched)} color="#C084FC" />
+              <StatTile label="Séquence" value={fmt(c1?.sequence)} color="#7B6FFF" />
             </div>
 
-            {/* Funnel */}
-            <div className="space-y-2 mb-5">
-              <p className="text-white/30 text-[10px] font-semibold uppercase mb-3">Entonnoir pipeline</p>
+            {/* Mini funnel */}
+            <div className="mb-5 space-y-2">
+              <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
+                Entonnoir pipeline
+              </p>
               {c1 && [
-                { label: 'À scorer',  value: c1.a_scorer, color: 'bg-amber-500/70' },
-                { label: 'Scorés',    value: c1.scored,   color: 'bg-orange-500/70' },
-                { label: 'Enrichis',  value: c1.enriched, color: 'bg-purple-500/70' },
-                { label: 'Séquence',  value: c1.sequence, color: 'bg-blue-500/70' },
-                { label: 'HOT',       value: c1.hot,      color: 'bg-[#E8445A]/80' },
-                { label: 'Répondus',  value: c1.replied,  color: 'bg-green-500/70' },
+                { label: 'À scorer',  value: c1.a_scorer, color: '#FFB020' },
+                { label: 'Scorés',    value: c1.scored,   color: '#FF8A32' },
+                { label: 'Enrichis',  value: c1.enriched, color: '#C084FC' },
+                { label: 'Séquence',  value: c1.sequence, color: '#7B6FFF' },
+                { label: 'HOT',       value: c1.hot,      color: '#FF3358' },
+                { label: 'Répondus',  value: c1.replied,  color: '#00C97B' },
               ].map((item) => (
                 <FunnelBar key={item.label} {...item} max={c1.total} />
               ))}
             </div>
 
-            {/* Alerts row */}
+            {/* Alert chips */}
             {c1 && (c1.hot > 0 || c1.replied > 0 || c1.failed > 0) && (
               <div className="flex items-center gap-2 flex-wrap">
                 {c1.hot > 0 && (
-                  <span className="flex items-center gap-1 bg-red-500/15 border border-red-500/20 px-2 py-0.5 rounded-full text-[11px] font-medium text-red-400">
-                    <Flame size={10} /> {c1.hot} HOT
+                  <span
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(255,51,88,0.12)',
+                      border: '1px solid rgba(255,51,88,0.25)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#FF3358',
+                    }}
+                  >
+                    <Flame size={10} />
+                    {c1.hot} HOT
                   </span>
                 )}
                 {c1.replied > 0 && (
-                  <span className="flex items-center gap-1 bg-green-500/15 border border-green-500/20 px-2 py-0.5 rounded-full text-[11px] font-medium text-green-400">
-                    <MessageSquare size={10} /> {c1.replied} réponse(s)
+                  <span
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(0,201,123,0.1)',
+                      border: '1px solid rgba(0,201,123,0.22)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#00C97B',
+                    }}
+                  >
+                    <MessageSquare size={10} />
+                    {c1.replied} réponse(s)
                   </span>
                 )}
                 {c1.failed > 0 && (
-                  <span className="flex items-center gap-1 bg-orange-500/15 border border-orange-500/20 px-2 py-0.5 rounded-full text-[11px] font-medium text-orange-400">
-                    <Activity size={10} /> {c1.failed} erreur(s)
+                  <span
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(255,176,32,0.1)',
+                      border: '1px solid rgba(255,176,32,0.22)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#FFB020',
+                    }}
+                  >
+                    <Activity size={10} />
+                    {c1.failed} erreur(s)
                   </span>
                 )}
               </div>
@@ -150,58 +252,92 @@ export default function GlobalDashboard() {
 
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-full flex items-center justify-between px-6 py-3.5 border-t border-white/10 hover:bg-white/5 transition-colors group"
+            className="w-full flex items-center justify-between px-6 py-4 transition-colors group"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <span className="text-sm font-medium text-white/50 group-hover:text-white transition-colors">Ouvrir Amazon FR</span>
-            <ArrowRight size={15} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            <span className="text-sm font-medium transition-colors" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              Ouvrir Amazon FR
+            </span>
+            <ArrowRight size={14} style={{ color: 'rgba(255,255,255,0.2)', transition: 'all 0.2s' }} />
           </button>
         </div>
 
         {/* Campaign 2 */}
-        <div className="rounded-2xl overflow-hidden border border-blue-500/15"
-          style={{ background: 'linear-gradient(135deg, #1e2d4a 0%, #101929 100%)' }}>
-          <div className="px-6 pt-6 pb-4">
+        <div
+          className="rounded-2xl overflow-hidden relative"
+          style={{
+            background: 'linear-gradient(135deg, #0C1020 0%, #080A16 100%)',
+            border: '1px solid rgba(123,111,255,0.12)',
+          }}
+        >
+          <div
+            className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(123,111,255,0.05) 0%, transparent 70%)' }}
+          />
+
+          <div className="relative px-6 pt-6 pb-5">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <Target size={18} className="text-white" />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: 'rgba(123,111,255,0.12)',
+                    border: '1px solid rgba(123,111,255,0.22)',
+                  }}
+                >
+                  <Target size={17} style={{ color: '#7B6FFF' }} />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">Campagne 2</p>
-                  <p className="text-white/40 text-xs">Nouveau marché</p>
+                  <p className="font-semibold text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>Campagne 2</p>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginTop: '1px' }}>Nouveau marché</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 bg-blue-500/15 border border-blue-500/20 px-2 py-0.5 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span className="text-blue-400 text-[11px] font-semibold">Setup</span>
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                style={{ background: 'rgba(123,111,255,0.1)', border: '1px solid rgba(123,111,255,0.2)' }}
+              >
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#7B6FFF' }} />
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#7B6FFF', letterSpacing: '0.05em' }}>SETUP</span>
               </div>
             </div>
 
+            {/* Empty stats */}
             <div className="grid grid-cols-4 gap-2 mb-5">
               {['Total', 'À scorer', 'Enrichis', 'Séquence'].map((label) => (
-                <div key={label} className="bg-white/3 rounded-lg p-2.5 border border-white/5 text-center">
-                  <p className="text-lg font-bold text-white/20">—</p>
-                  <p className="text-white/20 text-[10px] mt-0.5">{label}</p>
+                <div
+                  key={label}
+                  className="rounded-lg p-3 text-center"
+                  style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
+                >
+                  <p style={{
+                    fontFamily: 'DM Mono, monospace',
+                    fontSize: '1.25rem',
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.12)',
+                    lineHeight: 1,
+                  }}>—</p>
+                  <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.15)', marginTop: '4px' }}>{label}</p>
                 </div>
               ))}
             </div>
 
             {/* Setup checklist */}
-            <div className="mb-5">
-              <p className="text-white/30 text-[10px] font-semibold uppercase mb-3">Configuration requise</p>
+            <div className="mb-4">
+              <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+                Configuration requise
+              </p>
               <div className="space-y-2.5">
                 {[
-                  { label: 'Connecter les tables Supabase', done: false },
-                  { label: 'Configurer les webhooks n8n', done: false },
-                  { label: 'Créer les templates emails', done: false },
-                  { label: 'Définir les critères de scoring', done: false },
-                ].map(({ label, done }) => (
+                  'Connecter les tables Supabase',
+                  'Configurer les webhooks n8n',
+                  'Créer les templates emails',
+                  'Définir les critères de scoring',
+                ].map((label) => (
                   <div key={label} className="flex items-center gap-2.5">
-                    {done
-                      ? <CheckCircle2 size={14} className="text-green-400 flex-shrink-0" />
-                      : <Circle size={14} className="text-white/15 flex-shrink-0" />
-                    }
-                    <span className={`text-xs ${done ? 'text-white/50' : 'text-white/25'}`}>{label}</span>
+                    <Circle size={12} style={{ color: 'rgba(255,255,255,0.12)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -210,29 +346,54 @@ export default function GlobalDashboard() {
 
           <button
             onClick={() => navigate('/c2')}
-            className="w-full flex items-center justify-between px-6 py-3.5 border-t border-white/8 hover:bg-white/5 transition-colors group"
+            className="w-full flex items-center justify-between px-6 py-4 transition-colors"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors">Configurer Campagne 2</span>
-            <ArrowRight size={15} className="text-white/20 group-hover:text-white/50 group-hover:translate-x-1 transition-all" />
+            <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              Configurer Campagne 2
+            </span>
+            <ArrowRight size={14} style={{ color: 'rgba(255,255,255,0.15)' }} />
           </button>
         </div>
       </div>
 
-      {/* Combined quick stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* Quick stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 fade-up-2">
         {[
-          { label: 'Total leads (C1)', value: fmt(c1?.total), Icon: Users, color: 'text-[#1B3A5C]', bg: 'bg-slate-50' },
-          { label: 'HOT à traiter (C1)', value: fmt(c1?.hot), Icon: Flame, color: 'text-[#E8445A]', bg: 'bg-red-50' },
-          { label: 'En séquence (C1)', value: fmt(c1?.sequence), Icon: Mail, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Taux réponse (C1)', value: c1 && c1.sequence > 0 ? `${Math.round((c1.replied / c1.sequence) * 100)}%` : '—', Icon: TrendingUp, color: 'text-green-700', bg: 'bg-green-50' },
-        ].map(({ label, value, Icon, color, bg }) => (
-          <div key={label} className={`card ${bg} flex items-center gap-3`}>
-            <div className={`w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0`}>
-              <Icon size={16} className={color} />
+          { label: 'Total leads (C1)',     value: fmt(c1?.total),    Icon: Users,        color: '#7B6FFF' },
+          { label: 'HOT à traiter (C1)',   value: fmt(c1?.hot),      Icon: Flame,        color: '#FF3358' },
+          { label: 'En séquence (C1)',     value: fmt(c1?.sequence), Icon: Mail,         color: '#7B6FFF' },
+          {
+            label: 'Taux réponse (C1)',
+            value: c1 && c1.sequence > 0 ? `${Math.round((c1.replied / c1.sequence) * 100)}%` : '—',
+            Icon: TrendingUp,
+            color: '#00C97B',
+          },
+        ].map(({ label, value, Icon, color }) => (
+          <div
+            key={label}
+            className="card flex items-center gap-3"
+          >
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: color + '12', border: `1px solid ${color}20` }}
+            >
+              <Icon size={15} style={{ color }} />
             </div>
             <div className="min-w-0">
-              <p className={`text-xl font-bold ${color}`}>{value}</p>
-              <p className="text-muted text-xs truncate">{label}</p>
+              <p style={{
+                fontFamily: 'DM Mono, monospace',
+                fontSize: '1.2rem',
+                fontWeight: 500,
+                letterSpacing: '-0.04em',
+                color: 'var(--text)',
+                lineHeight: 1,
+              }}>
+                {value}
+              </p>
+              <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{label}</p>
             </div>
           </div>
         ))}
