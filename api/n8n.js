@@ -4,7 +4,7 @@ const TEST = 'https://noahsgds.app.n8n.cloud/webhook-test'
 const WORKFLOW_URLS = {
   'lancer-enrichissement': `${PROD}/lancer-enrichissement`,
   'lancer-generation':     `${PROD}/lancer-generation`,
-  'lancer-sequence':       `${TEST}/lancer-sequence`,
+  'lancer-sequence':       `${PROD}/lancer-sequence`,
 }
 
 export default async function handler(req, res) {
