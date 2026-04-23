@@ -132,7 +132,6 @@ const DEFAULT_FILTERS = {
   ratingMin: '',       // number 0-5
   feedbackMin: '',     // number 0-100
   productsMin: '',     // int
-  onZalandoOnly: false,
   since: '',           // 'today' | '7d' | '30d' | ''
 }
 
@@ -266,9 +265,6 @@ export default function Scraping() {
       const v = parseInt(filters.productsMin)
       out = out.filter((r) => r.nb_products != null && r.nb_products >= v)
     }
-    if (filters.onZalandoOnly) {
-      out = out.filter((r) => r.on_zalando)
-    }
     if (filters.since) {
       const now = Date.now()
       const ms = filters.since === 'today' ? 86400000 : filters.since === '7d' ? 7 * 86400000 : 30 * 86400000
@@ -303,7 +299,6 @@ export default function Scraping() {
     (filters.ratingMin !== '' ? 1 : 0) +
     (filters.feedbackMin !== '' ? 1 : 0) +
     (filters.productsMin !== '' ? 1 : 0) +
-    (filters.onZalandoOnly ? 1 : 0) +
     (filters.since ? 1 : 0)
 
   function toggleLang(code) {

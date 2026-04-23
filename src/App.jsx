@@ -18,10 +18,11 @@ import Campaign   from './pages/Campaign'
 import Debug      from './pages/Debug'
 
 // Campaign 2
-import C2Home      from './pages/c2/Home'
-import C2Pipeline  from './pages/c2/Pipeline'
-import C2Leads     from './pages/c2/Leads'
-import C2Templates from './pages/c2/Templates'
+import C2Home          from './pages/c2/Home'
+import C2Pipeline      from './pages/c2/Pipeline'
+import C2Leads         from './pages/c2/Leads'
+import C2Templates     from './pages/c2/Templates'
+import CampagneEmail   from './pages/CampagneEmail'
 
 export default function App() {
   return (
@@ -48,11 +49,17 @@ export default function App() {
               <Route path="/debug"       element={<Debug />} />
 
               {/* Campaign 2 */}
-              <Route path="/c2"          element={<C2Home />} />
-              <Route path="/c2/pipeline" element={<C2Pipeline />} />
-              <Route path="/c2/leads"    element={<C2Leads />} />
-              <Route path="/c2/templates" element={<C2Templates />} />
-              <Route path="/c2/campagne" element={<Campaign />} />
+              <Route path="/c2"                element={<C2Home />} />
+              <Route path="/c2/pipeline"       element={<C2Pipeline />} />
+              <Route path="/c2/scraping"       element={<Scraping />} />
+              <Route path="/c2/leads"          element={<C2Leads />} />
+              <Route path="/c2/inbox"          element={<Inbox />} />
+              <Route path="/c2/analytics"      element={<Analytics />} />
+              <Route path="/c2/templates"      element={<C2Templates />} />
+              <Route path="/c2/abtest"         element={<ABTest />} />
+              <Route path="/c2/erreurs"        element={<Errors />} />
+              <Route path="/c2/campagne"       element={<Campaign />} />
+              <Route path="/c2/campagne-email" element={<CampagneEmail />} />
             </Routes>
           </Layout>
         } />

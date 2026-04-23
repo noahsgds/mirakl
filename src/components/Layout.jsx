@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, FileText, FlaskConical, AlertTriangle,
   Zap, BarChart2, Inbox, Settings, Bell, X, Flame, MessageSquare,
-  Bot, GitBranch, Globe, Target,
+  Bot, GitBranch, Globe, Target, Mail,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -25,12 +25,23 @@ const C1_NAV = [
   { to: '/campagne',   label: 'Campagne',    icon: Settings },
 ]
 
+/*
+ * C2_NAV is aligned with C1_NAV (same structure + labels) so the sales team
+ * gets the same workflow surface. Extra entry "Campagne Email" is the
+ * validation UI for seller × marketplace email sequences (VUE 1 + VUE 2).
+ */
 const C2_NAV = [
-  { to: '/c2',           label: 'Dashboard',   icon: LayoutDashboard },
-  { to: '/c2/pipeline',  label: 'Pipeline',    icon: GitBranch },
-  { to: '/c2/leads',     label: 'Leads',       icon: Users },
-  { to: '/c2/templates', label: 'Templates',   icon: FileText },
-  { to: '/c2/campagne',  label: 'Campagne',    icon: Settings },
+  { to: '/c2',                 label: 'Dashboard',      icon: LayoutDashboard },
+  { to: '/c2/pipeline',        label: 'Pipeline',       icon: GitBranch },
+  { to: '/c2/scraping',        label: 'Scraping',       icon: Bot },
+  { to: '/c2/leads',           label: 'Leads',          icon: Users },
+  { to: '/c2/inbox',           label: 'Inbox',          icon: Inbox },
+  { to: '/c2/analytics',       label: 'Analytics',      icon: BarChart2 },
+  { to: '/c2/templates',       label: 'Templates',      icon: FileText },
+  { to: '/c2/abtest',          label: 'A/B Test',       icon: FlaskConical },
+  { to: '/c2/erreurs',         label: 'Erreurs',        icon: AlertTriangle },
+  { to: '/c2/campagne',        label: 'Campagne',       icon: Settings },
+  { to: '/c2/campagne-email',  label: 'Campagne Email', icon: Mail },
 ]
 
 /* ─── Campaign tabs ──────────────────────────────────── */
@@ -201,8 +212,8 @@ export default function Layout({ children }) {
         <div className="px-5 py-4 border-t border-white/10">
           {isC2 ? (
             <>
-              <p className="text-white/30 text-xs">Campagne 2 · Setup en cours</p>
-              <p className="text-white/20 text-xs">Connecter vos tables →</p>
+              <p className="text-white/30 text-xs">Campagne 2 · Sales outreach</p>
+              <p className="text-white/20 text-xs">Matching sellers → marketplaces</p>
             </>
           ) : (
             <>
