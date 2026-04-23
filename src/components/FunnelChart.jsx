@@ -3,30 +3,30 @@ import {
 } from 'recharts'
 
 const FUNNEL_ORDER = [
-  { key: 'A_SCORER',          label: 'À scorer',    color: '#4C5180' },
-  { key: 'scored',            label: 'Scorés',      color: '#FFB020' },
-  { key: 'enriched',          label: 'Enrichis',    color: '#C084FC' },
-  { key: 'sequence_en_cours', label: 'En séquence', color: '#7B6FFF' },
-  { key: 'sequence_terminee', label: 'Terminée',    color: '#8890B8' },
-  { key: 'HOT',               label: 'HOT',         color: '#FF3358' },
-  { key: 'REPLIED',           label: 'Réponses',    color: '#00C97B' },
+  { key: 'A_SCORER',          label: 'À scorer',    color: '#b5bfc8' },
+  { key: 'scored',            label: 'Scorés',      color: '#f59e0b' },
+  { key: 'enriched',          label: 'Enrichis',    color: '#7c3aed' },
+  { key: 'sequence_en_cours', label: 'En séquence', color: '#2764ff' },
+  { key: 'sequence_terminee', label: 'Terminée',    color: '#6b7280' },
+  { key: 'HOT',               label: 'HOT',         color: '#dc2626' },
+  { key: 'REPLIED',           label: 'Réponses',    color: '#16a34a' },
 ]
 
 const TooltipContent = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
     <div style={{
-      background: 'var(--surface-3)',
-      border: '1px solid var(--border-strong)',
+      background: '#ffffff',
+      border: '1px solid var(--border)',
       borderRadius: '8px',
       padding: '8px 12px',
       fontSize: '12px',
       color: 'var(--text)',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      boxShadow: '0 8px 24px rgba(16,43,73,0.12)',
     }}>
-      <p style={{ color: 'var(--text-2)', marginBottom: '2px' }}>{label}</p>
-      <p style={{ fontFamily: 'DM Mono, monospace', fontWeight: 500 }}>
-        {payload[0].value} <span style={{ color: 'var(--text-3)' }}>leads</span>
+      <p style={{ color: 'var(--text-3)', marginBottom: '2px', fontSize: '11px' }}>{label}</p>
+      <p style={{ fontFamily: 'DM Mono, monospace', fontWeight: 600, color: 'var(--text)' }}>
+        {payload[0].value} <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>leads</span>
       </p>
     </div>
   )
@@ -42,25 +42,25 @@ export default function FunnelChart({ counts }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 80 }}>
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(120,128,200,0.06)" />
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
         <XAxis
           type="number"
-          tick={{ fontSize: 11, fill: '#4C5180', fontFamily: 'DM Mono, monospace' }}
-          axisLine={{ stroke: 'rgba(120,128,200,0.1)' }}
+          tick={{ fontSize: 11, fill: 'var(--text-3)', fontFamily: 'DM Mono, monospace' }}
+          axisLine={{ stroke: 'var(--border)' }}
           tickLine={false}
         />
         <YAxis
           dataKey="name"
           type="category"
-          tick={{ fontSize: 11, fill: '#8890B8', fontFamily: 'Outfit, sans-serif' }}
+          tick={{ fontSize: 11, fill: 'var(--text-2)', fontFamily: 'Outfit, sans-serif' }}
           width={80}
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip content={<TooltipContent />} cursor={{ fill: 'rgba(120,128,200,0.04)' }} />
-        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+        <Tooltip content={<TooltipContent />} cursor={{ fill: 'var(--surface-2)' }} />
+        <Bar dataKey="value" radius={[0, 5, 5, 0]}>
           {data.map((d, i) => (
-            <Cell key={i} fill={d.color} fillOpacity={0.85} />
+            <Cell key={i} fill={d.color} />
           ))}
         </Bar>
       </BarChart>

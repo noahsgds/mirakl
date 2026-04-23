@@ -8,27 +8,27 @@ import { supabase } from '../lib/supabase'
 import { CATEGORIES } from '../lib/categories'
 
 const FUNNEL_STEPS = [
-  { key: 'A_SCORER',          label: 'À scorer',    color: '#4C5180' },
-  { key: 'scored',            label: 'Scorés',      color: '#FFB020' },
-  { key: 'enriched',         label: 'Enrichis',    color: '#C084FC' },
-  { key: 'sequence_en_cours', label: 'En séquence', color: '#7B6FFF' },
-  { key: 'sequence_terminee', label: 'Terminée',    color: '#8890B8' },
-  { key: 'HOT',               label: 'HOT',         color: '#FF3358' },
-  { key: 'REPLIED',           label: 'Réponses',    color: '#00C97B' },
+  { key: 'A_SCORER',          label: 'À scorer',    color: '#b5bfc8' },
+  { key: 'scored',            label: 'Scorés',      color: '#d97706' },
+  { key: 'enriched',         label: 'Enrichis',    color: '#7c3aed' },
+  { key: 'sequence_en_cours', label: 'En séquence', color: '#2764ff' },
+  { key: 'sequence_terminee', label: 'Terminée',    color: '#6b7280' },
+  { key: 'HOT',               label: 'HOT',         color: '#dc2626' },
+  { key: 'REPLIED',           label: 'Réponses',    color: '#16a34a' },
 ]
 
 const CHART_TOOLTIP = {
-  background: '#191B2D',
-  border: '1px solid rgba(120,128,200,0.16)',
+  background: '#ffffff',
+  border: '1px solid #dee3e8',
   borderRadius: '8px',
   fontSize: 12,
-  color: '#E2E5F6',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+  color: '#102b49',
+  boxShadow: '0 8px 24px rgba(16,43,73,0.12)',
 }
 
-const CHART_GRID = 'rgba(120,128,200,0.06)'
-const TICK_STYLE = { fontSize: 11, fill: '#4C5180', fontFamily: 'DM Mono, monospace' }
-const TICK_LABEL = { fontSize: 11, fill: '#8890B8', fontFamily: 'Outfit, sans-serif' }
+const CHART_GRID = 'var(--border)'
+const TICK_STYLE = { fontSize: 11, fill: 'var(--text-3)', fontFamily: 'DM Mono, monospace' }
+const TICK_LABEL = { fontSize: 11, fill: 'var(--text-2)', fontFamily: 'Outfit, sans-serif' }
 
 function ChartTooltip({ active, payload, label, valueLabel }) {
   if (!active || !payload?.length) return null
@@ -90,7 +90,7 @@ export default function Analytics() {
   const scoreBuckets = Array.from({ length: 10 }, (_, i) => ({
     range: `${i * 10}–${i * 10 + 9}`,
     count: qualData.filter((r) => r.score_total >= i * 10 && r.score_total < i * 10 + 10).length,
-    fill: i >= 7 ? '#00C97B' : i >= 5 ? '#FFB020' : '#FF3358',
+    fill: i >= 7 ? '#16a34a' : i >= 5 ? '#d97706' : '#dc2626',
   }))
 
   const catMap = {}
@@ -143,9 +143,9 @@ export default function Analytics() {
     return acc
   }, {})
   const recoData = [
-    { name: 'QUALIFIE', value: recoCounts['QUALIFIE'] || 0, color: '#00C97B' },
-    { name: 'A_REVOIR', value: recoCounts['A_REVOIR'] || 0, color: '#FFB020' },
-    { name: 'REJETE',   value: recoCounts['REJETE']   || 0, color: '#FF3358' },
+    { name: 'QUALIFIE', value: recoCounts['QUALIFIE'] || 0, color: '#16a34a' },
+    { name: 'A_REVOIR', value: recoCounts['A_REVOIR'] || 0, color: '#d97706' },
+    { name: 'REJETE',   value: recoCounts['REJETE']   || 0, color: '#dc2626' },
   ]
   const totalReco = recoData.reduce((s, r) => s + r.value, 0)
 
@@ -188,13 +188,13 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 fade-up-2">
 
         {/* Funnel */}
-        <Section icon={TrendingUp} iconColor="#FF3358" title="Funnel pipeline">
+        <Section icon={TrendingUp} iconColor="#dc2626" title="Funnel pipeline">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={funnelData} layout="vertical" margin={{ left: 80, right: 16 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_GRID} />
               <XAxis type="number" tick={TICK_STYLE} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
               <YAxis dataKey="label" type="category" tick={TICK_LABEL} width={80} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTooltip valueLabel="leads" />} cursor={{ fill: 'rgba(120,128,200,0.04)' }} />
+              <Tooltip content={<ChartTooltip valueLabel="leads" />} cursor={{ fill: 'rgba(16,43,73,0.04)' }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                 {funnelData.map((d, i) => <Cell key={i} fill={d.color} fillOpacity={0.85} />)}
               </Bar>
@@ -203,7 +203,7 @@ export default function Analytics() {
         </Section>
 
         {/* Recommandation pie */}
-        <Section icon={Target} iconColor="#7B6FFF" title="Répartition recommandations IA">
+        <Section icon={Target} iconColor="#2764ff" title="Répartition recommandations IA">
           <div className="flex items-center gap-6">
             <ResponsiveContainer width="50%" height={200}>
               <PieChart>
@@ -231,13 +231,13 @@ export default function Analytics() {
       </div>
 
       {/* Score distribution */}
-      <Section icon={BarChart2} iconColor="#FFB020" title="Distribution des scores">
+      <Section icon={BarChart2} iconColor="#d97706" title="Distribution des scores">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={scoreBuckets} margin={{ left: 0, right: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID} />
             <XAxis dataKey="range" tick={TICK_STYLE} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
             <YAxis tick={TICK_STYLE} axisLine={false} tickLine={false} />
-            <Tooltip content={<ChartTooltip valueLabel="leads" />} cursor={{ fill: 'rgba(120,128,200,0.04)' }} />
+            <Tooltip content={<ChartTooltip valueLabel="leads" />} cursor={{ fill: 'rgba(16,43,73,0.04)' }} />
             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
               {scoreBuckets.map((b, i) => <Cell key={i} fill={b.fill} fillOpacity={0.85} />)}
             </Bar>
@@ -245,35 +245,35 @@ export default function Analytics() {
         </ResponsiveContainer>
         <div className="flex items-center gap-4 mt-3 justify-center text-xs" style={{ color: 'var(--text-3)' }}>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#00C97B' }} />
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#16a34a' }} />
             ≥ 70 (qualifié)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#FFB020' }} />
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#d97706' }} />
             50–69 (à revoir)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#FF3358' }} />
+            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#dc2626' }} />
             &lt; 50 (rejeté)
           </span>
         </div>
       </Section>
 
       {/* Emails / day */}
-      <Section icon={BarChart2} iconColor="#00C97B" title="Emails envoyés — 7 derniers jours">
+      <Section icon={BarChart2} iconColor="#16a34a" title="Emails envoyés — 7 derniers jours">
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={dailyEmails} margin={{ left: 0, right: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
             <XAxis dataKey="date" tick={TICK_STYLE} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
             <YAxis tick={TICK_STYLE} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(120,128,200,0.15)' }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(16,43,73,0.12)' }} />
             <Line
               type="monotone"
               dataKey="emails"
-              stroke="#7B6FFF"
+              stroke="#2764ff"
               strokeWidth={2}
-              dot={{ r: 4, fill: '#7B6FFF', stroke: '#191B2D', strokeWidth: 2 }}
-              activeDot={{ r: 5, fill: '#7B6FFF', boxShadow: '0 0 8px rgba(123,111,255,0.5)' }}
+              dot={{ r: 4, fill: '#2764ff', stroke: '#ffffff', strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: '#2764ff' }}
               name="Emails"
             />
           </LineChart>
@@ -281,31 +281,31 @@ export default function Analytics() {
       </Section>
 
       {/* Categories volume */}
-      <Section icon={Layers} iconColor="#C084FC" title="Sellers par catégorie (volume)">
+      <Section icon={Layers} iconColor="#7c3aed" title="Sellers par catégorie (volume)">
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={catData} layout="vertical" margin={{ left: 140, right: 48 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_GRID} />
             <XAxis type="number" tick={TICK_STYLE} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
             <YAxis dataKey="cat" type="category" tick={TICK_LABEL} width={140} axisLine={false} tickLine={false} />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(120,128,200,0.04)' }} />
-            <Legend wrapperStyle={{ fontSize: 11, color: '#8890B8', fontFamily: 'Outfit, sans-serif' }} />
-            <Bar dataKey="total"   fill="#7B6FFF" fillOpacity={0.8} radius={[0, 4, 4, 0]} name="Total"
-              label={{ position: 'right', fontSize: 11, fill: '#4C5180', fontFamily: 'DM Mono, monospace', formatter: (v) => v > 0 ? v : '' }} />
-            <Bar dataKey="present" fill="#00C97B" fillOpacity={0.8} radius={[0, 4, 4, 0]} name="Déjà sur marketplace" />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(16,43,73,0.04)' }} />
+            <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'Outfit, sans-serif' }} />
+            <Bar dataKey="total"   fill="#2764ff" fillOpacity={0.8} radius={[0, 4, 4, 0]} name="Total"
+              label={{ position: 'right', fontSize: 11, fill: 'var(--text-3)', fontFamily: 'DM Mono, monospace', formatter: (v) => v > 0 ? v : '' }} />
+            <Bar dataKey="present" fill="#16a34a" fillOpacity={0.8} radius={[0, 4, 4, 0]} name="Déjà sur marketplace" />
           </BarChart>
         </ResponsiveContainer>
       </Section>
 
       {/* Categories conversion */}
-      <Section icon={Tag} iconColor="#FF3358" title="Taux de conversion par catégorie (HOT + REPLIED)">
+      <Section icon={Tag} iconColor="#dc2626" title="Taux de conversion par catégorie (HOT + REPLIED)">
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={catData} layout="vertical" margin={{ left: 140, right: 48 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_GRID} />
             <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={TICK_STYLE} axisLine={{ stroke: CHART_GRID }} tickLine={false} />
             <YAxis dataKey="cat" type="category" tick={TICK_LABEL} width={140} axisLine={false} tickLine={false} />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(120,128,200,0.04)' }} formatter={(v) => `${v}%`} />
-            <Bar dataKey="taux" fill="#FF3358" fillOpacity={0.8} radius={[0, 4, 4, 0]}
-              label={{ position: 'right', fontSize: 11, fill: '#4C5180', fontFamily: 'DM Mono, monospace', formatter: (v) => v > 0 ? `${v}%` : '' }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(16,43,73,0.04)' }} formatter={(v) => `${v}%`} />
+            <Bar dataKey="taux" fill="#dc2626" fillOpacity={0.8} radius={[0, 4, 4, 0]}
+              label={{ position: 'right', fontSize: 11, fill: 'var(--text-3)', fontFamily: 'DM Mono, monospace', formatter: (v) => v > 0 ? `${v}%` : '' }} />
           </BarChart>
         </ResponsiveContainer>
       </Section>

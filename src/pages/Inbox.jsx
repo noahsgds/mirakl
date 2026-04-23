@@ -4,14 +4,14 @@ import { supabase } from '../lib/supabase'
 import LeadDrawer from '../components/LeadDrawer'
 
 const TABS = [
-  { key: 'HOT',     label: 'HOT leads',  icon: Flame,          accentColor: '#FF3358' },
-  { key: 'REPLIED', label: 'Réponses',   icon: MessageSquare,  accentColor: '#00C97B' },
+  { key: 'HOT',     label: 'HOT leads',  icon: Flame,          accentColor: '#dc2626' },
+  { key: 'REPLIED', label: 'Réponses',   icon: MessageSquare,  accentColor: '#16a34a' },
 ]
 
 const OUTCOME_OPTIONS = [
-  { value: 'call_planned', label: 'Appel planifié', icon: Phone,    color: '#7B6FFF' },
-  { value: 'won',          label: 'Gagné',          icon: Trophy,   color: '#00C97B' },
-  { value: 'lost',         label: 'Perdu',          icon: XCircle,  color: '#FF3358' },
+  { value: 'call_planned', label: 'Appel planifié', icon: Phone,    color: '#2764ff' },
+  { value: 'won',          label: 'Gagné',          icon: Trophy,   color: '#16a34a' },
+  { value: 'lost',         label: 'Perdu',          icon: XCircle,  color: '#dc2626' },
 ]
 
 function fmt(ts) {
@@ -33,7 +33,7 @@ function LeadCard({ lead, onAction, onOpen }) {
   }
 
   const isHot = lead.statut === 'HOT'
-  const glowColor = isHot ? '#FF3358' : '#00C97B'
+  const glowColor = isHot ? '#dc2626' : '#16a34a'
 
   return (
     <div
@@ -69,9 +69,9 @@ function LeadCard({ lead, onAction, onOpen }) {
                 fontWeight: 600,
                 padding: '1px 7px',
                 borderRadius: '999px',
-                background: 'rgba(120,128,200,0.08)',
+                background: 'rgba(16,43,73,0.06)',
                 color: 'var(--text-2)',
-                border: '1px solid rgba(120,128,200,0.14)',
+                border: '1px solid rgba(16,43,73,0.1)',
               }}>
                 {lead.amazon_sellers.categories}
               </span>
@@ -91,7 +91,7 @@ function LeadCard({ lead, onAction, onOpen }) {
                 <a href={`mailto:${lead.decision_maker_email}`}
                   className="flex items-center gap-1 text-xs transition-colors"
                   style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#7B6FFF'}
+                  onMouseEnter={e => e.currentTarget.style.color = '#2764ff'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
                 >
                   <Mail size={11} /> {lead.decision_maker_email}
@@ -100,7 +100,7 @@ function LeadCard({ lead, onAction, onOpen }) {
               {lead.decision_maker_linkedin && (
                 <a href={lead.decision_maker_linkedin} target="_blank" rel="noreferrer"
                   className="flex items-center gap-1 text-xs"
-                  style={{ color: '#7B6FFF' }}
+                  style={{ color: '#2764ff' }}
                 >
                   <Linkedin size={11} /> LinkedIn
                 </a>
@@ -113,7 +113,7 @@ function LeadCard({ lead, onAction, onOpen }) {
             {lead.seller_sequence?.opened_count > 0 && (
               <span style={{
                 fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px',
-                background: 'rgba(123,111,255,0.1)', color: '#7B6FFF', border: '1px solid rgba(123,111,255,0.2)',
+                background: 'rgba(39,100,255,0.1)', color: '#2764ff', border: '1px solid rgba(39,100,255,0.2)',
               }}>
                 {lead.seller_sequence.opened_count} ouverture(s)
               </span>
@@ -121,7 +121,7 @@ function LeadCard({ lead, onAction, onOpen }) {
             {lead.seller_sequence?.clicked_count > 0 && (
               <span style={{
                 fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '999px',
-                background: 'rgba(0,224,192,0.08)', color: '#00E0C0', border: '1px solid rgba(0,224,192,0.18)',
+                background: 'rgba(8,145,178,0.08)', color: '#0891b2', border: '1px solid rgba(8,145,178,0.2)',
               }}>
                 {lead.seller_sequence.clicked_count} clic(s)
               </span>
@@ -143,7 +143,7 @@ function LeadCard({ lead, onAction, onOpen }) {
               fontWeight: 500,
               letterSpacing: '-0.04em',
               lineHeight: 1,
-              color: lead.score_total >= 70 ? '#00C97B' : lead.score_total >= 50 ? '#FFB020' : '#FF3358',
+              color: lead.score_total >= 70 ? '#16a34a' : lead.score_total >= 50 ? '#d97706' : '#dc2626',
             }}>
               {lead.score_total}
             </p>

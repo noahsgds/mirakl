@@ -1,13 +1,13 @@
 const RECO_MAP = {
-  QUALIFIE: { bg: 'rgba(0,201,123,0.1)',   color: '#00C97B', border: 'rgba(0,201,123,0.22)' },
-  A_REVOIR: { bg: 'rgba(255,176,32,0.1)',  color: '#FFB020', border: 'rgba(255,176,32,0.22)' },
-  REJETE:   { bg: 'rgba(255,51,88,0.09)',  color: '#FF5577', border: 'rgba(255,51,88,0.2)' },
+  QUALIFIE: { bg: 'rgba(22,163,74,0.08)',  color: '#16a34a', border: 'rgba(22,163,74,0.22)' },
+  A_REVOIR: { bg: 'rgba(217,119,6,0.08)',  color: '#d97706', border: 'rgba(217,119,6,0.22)' },
+  REJETE:   { bg: 'rgba(220,38,38,0.07)',  color: '#dc2626', border: 'rgba(220,38,38,0.18)' },
 }
 
 export default function RecoBadge({ value }) {
   if (!value) return <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>—</span>
 
-  const s = RECO_MAP[value] || { bg: 'rgba(120,128,200,0.07)', color: '#8890B8', border: 'rgba(120,128,200,0.14)' }
+  const s = RECO_MAP[value] || { bg: 'rgba(107,114,128,0.07)', color: '#6b7280', border: 'rgba(107,114,128,0.16)' }
 
   return (
     <span style={{

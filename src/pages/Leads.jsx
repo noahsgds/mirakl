@@ -214,9 +214,9 @@ export default function Leads() {
     fontFamily: 'Outfit, sans-serif',
     cursor: 'pointer',
     transition: 'all 0.15s',
-    background: active ? 'rgba(255,51,88,0.12)' : 'var(--surface-2)',
-    color: active ? '#FF3358' : 'var(--text-3)',
-    border: active ? '1px solid rgba(255,51,88,0.25)' : '1px solid var(--border-strong)',
+    background: active ? 'rgba(39,100,255,0.1)' : 'var(--surface-2)',
+    color: active ? '#2764ff' : 'var(--text-3)',
+    border: active ? '1px solid rgba(39,100,255,0.25)' : '1px solid var(--border-strong)',
   })
 
   return (
@@ -268,7 +268,7 @@ export default function Leads() {
             {hasFilters && (
               <span
                 className="w-4 h-4 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(255,51,88,0.25)', fontSize: '9px', fontWeight: 700, color: '#FF3358' }}
+                style={{ background: 'rgba(39,100,255,0.2)', fontSize: '9px', fontWeight: 700, color: '#2764ff' }}
               >
                 {filters.statuts.length + (filters.recommandation ? 1 : 0) + (filters.scoreMin ? 1 : 0) + (filters.contexte ? 1 : 0) + (filters.variant ? 1 : 0) + (filters.category ? 1 : 0)}
               </span>
@@ -307,9 +307,9 @@ export default function Leads() {
         <div
           className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm"
           style={{
-            background: importResult.errors === 0 ? 'rgba(0,201,123,0.08)' : 'rgba(255,176,32,0.08)',
-            border: `1px solid ${importResult.errors === 0 ? 'rgba(0,201,123,0.2)' : 'rgba(255,176,32,0.2)'}`,
-            color: importResult.errors === 0 ? '#00C97B' : '#FFB020',
+            background: importResult.errors === 0 ? 'rgba(22,163,74,0.08)' : 'rgba(217,119,6,0.08)',
+            border: `1px solid ${importResult.errors === 0 ? 'rgba(22,163,74,0.2)' : 'rgba(217,119,6,0.2)'}`,
+            color: importResult.errors === 0 ? '#16a34a' : '#d97706',
           }}
         >
           <CheckCircle2 size={14} />
@@ -437,11 +437,11 @@ export default function Leads() {
                   style={{
                     borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(120,128,200,0.02)',
+                    background: idx % 2 === 0 ? 'transparent' : 'rgba(16,43,73,0.02)',
                     transition: 'background 0.1s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(120,128,200,0.06)'}
-                  onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(120,128,200,0.02)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(39,100,255,0.05)'}
+                  onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(16,43,73,0.02)'}
                 >
                   {/* Vendeur */}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
@@ -507,9 +507,9 @@ export default function Leads() {
                             borderRadius: '999px',
                             fontSize: '11px',
                             fontWeight: 600,
-                            background: 'rgba(120,128,200,0.08)',
+                            background: 'rgba(16,43,73,0.06)',
                             color: 'var(--text-2)',
-                            border: '1px solid rgba(120,128,200,0.14)',
+                            border: '1px solid rgba(16,43,73,0.1)',
                             whiteSpace: 'nowrap',
                           }}>
                             {cat.emoji} {cat.label}
@@ -517,7 +517,7 @@ export default function Leads() {
                           {present.length > 0 && (
                             <MarketplaceChips
                               list={present}
-                              color={{ background: 'rgba(0,201,123,0.1)', color: '#00C97B', border: '1px solid rgba(0,201,123,0.18)', borderRadius: '4px' }}
+                              color={{ background: 'rgba(22,163,74,0.1)', color: '#16a34a', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '4px' }}
                             />
                           )}
                           {present.length === 0 && target.length > 0 && (
@@ -540,7 +540,7 @@ export default function Leads() {
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                     {r.seller_sequence?.sequence_step != null ? (
                       r.seller_sequence.statut_sequence === 'terminee' ? (
-                        <span style={{ color: '#00C97B', fontSize: '13px' }}>✓</span>
+                        <span style={{ color: '#16a34a', fontSize: '13px' }}>✓</span>
                       ) : (
                         <span style={{
                           display: 'inline-block',
@@ -549,9 +549,9 @@ export default function Leads() {
                           fontSize: '11px',
                           fontFamily: 'DM Mono, monospace',
                           fontWeight: 500,
-                          background: 'rgba(123,111,255,0.1)',
-                          color: '#7B6FFF',
-                          border: '1px solid rgba(123,111,255,0.2)',
+                          background: 'rgba(39,100,255,0.1)',
+                          color: '#2764ff',
+                          border: '1px solid rgba(39,100,255,0.2)',
                         }}>
                           {r.seller_sequence.sequence_step}/3
                         </span>
@@ -570,9 +570,9 @@ export default function Leads() {
                         fontSize: '11px',
                         fontFamily: 'DM Mono, monospace',
                         fontWeight: 700,
-                        background: r.ab_variant === 'A' ? 'rgba(123,111,255,0.1)' : 'rgba(255,51,88,0.1)',
-                        color: r.ab_variant === 'A' ? '#7B6FFF' : '#FF3358',
-                        border: r.ab_variant === 'A' ? '1px solid rgba(123,111,255,0.2)' : '1px solid rgba(255,51,88,0.2)',
+                        background: r.ab_variant === 'A' ? 'rgba(39,100,255,0.1)' : 'rgba(220,38,38,0.1)',
+                        color: r.ab_variant === 'A' ? '#2764ff' : '#dc2626',
+                        border: r.ab_variant === 'A' ? '1px solid rgba(39,100,255,0.2)' : '1px solid rgba(220,38,38,0.2)',
                       }}>
                         {r.ab_variant}
                       </span>
