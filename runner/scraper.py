@@ -389,15 +389,18 @@ def check_zalando(seller_name: str) -> tuple[bool, str]:
 # Driver
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Serialize driver startup. undetected-chromedriver renames its patched
-# binary during initialization — two workers booting simultaneously race
-# on the rename and one crashes (status -11). Holding this lock during
-# uc.Chrome() construction forces the workers to boot one at a time.
+# Serialize driver startup across threads AND processes. uc renames its
+# patched binary during init — any two drivers booting at the same time
+# (even in different Python processes) race on the rename and crash
+# (status -9 / -11). Threading lock handles intra-process; flock on a
+# sentinel file handles cross-process (needed when several scraper.py
+# instances run in parallel for multi-category scraping).
 _driver_init_lock = threading.Lock()
+_DRIVER_FLOCK_PATH = "/tmp/mirakl_uc_driver.lock"
 
 
 def make_driver():
-    import os, tempfile
+    import os, tempfile, fcntl
     headless = os.environ.get("SCRAPER_HEADLESS", "0") == "1"
     opts = uc.ChromeOptions()
     opts.add_argument("--no-sandbox")
@@ -410,7 +413,12 @@ def make_driver():
     if chrome_bin:
         opts.binary_location = chrome_bin
     with _driver_init_lock:
-        d = uc.Chrome(options=opts, headless=headless)
+        with open(_DRIVER_FLOCK_PATH, "w") as lf:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+            try:
+                d = uc.Chrome(options=opts, headless=headless)
+            finally:
+                fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
     d.set_page_load_timeout(30)
     return d
 
