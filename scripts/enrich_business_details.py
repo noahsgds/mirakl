@@ -20,9 +20,8 @@ import time
 from datetime import datetime
 
 import requests as http_requests
-import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import NoSuchWindowException, WebDriverException
+from curl_cffi import requests as curl_requests
 
 SUPABASE_URL = "https://ltuarofidogdjhzosboe.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dWFyb2ZpZG9nZGpoem9zYm9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2ODUwOTUsImV4cCI6MjA5MjI2MTA5NX0.-b9q5XuR1IgUPcsgGcsXklkU5iPvG65DqRKwd2srhcs"
@@ -161,46 +160,36 @@ def parse_sp_page(html: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Browser
+# HTTP (curl_cffi — TLS Chrome impersonation, pas de browser)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def make_driver():
-    import tempfile
-    opts = uc.ChromeOptions()
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--window-size=1280,900")
-    opts.add_argument(f"--user-data-dir={tempfile.mkdtemp(prefix='uc_enrich_')}")
-    d = uc.Chrome(options=opts, headless=False)
-    d.set_page_load_timeout(30)
-    return d
+_session = None
+
+def get_session():
+    global _session
+    if _session is None:
+        _session = curl_requests.Session(impersonate="chrome")
+    return _session
 
 
-def safe_get(driver, url: str, wait: float = 5) -> str:
+def fetch_sp_page(seller_id: str) -> str:
+    """Récupère la page /sp?seller=ID via curl_cffi."""
+    url = f"https://www.amazon.fr/sp?seller={seller_id}"
+    headers = {
+        "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer":         "https://www.amazon.fr/",
+        "DNT":             "1",
+    }
     try:
-        driver.get(url)
-        time.sleep(random.uniform(wait, wait + 2))
-        return driver.page_source
-    except (NoSuchWindowException, WebDriverException):
-        raise
-    except Exception as e:
-        print(f"  ✗ {e.__class__.__name__}: {e}")
+        resp = get_session().get(url, headers=headers, timeout=20)
+        if resp.status_code == 200 and len(resp.text) > 3000:
+            return resp.text
         return ""
-
-
-def restart_driver(driver):
-    try:
-        driver.quit()
-    except Exception:
-        pass
-    d = make_driver()
-    try:
-        d.get("https://www.amazon.fr")
-        time.sleep(random.uniform(4, 7))
-        print("  ✓ Driver redémarré")
-    except Exception:
-        pass
-    return d
+    except Exception as e:
+        print(f"  ✗ HTTP error: {e}")
+        return ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -251,98 +240,96 @@ def run(enrich_all: bool = False, limit: int = 200):
         print("Rien à faire.")
         return
 
-    driver = make_driver()
-    try:
-        print("Warmup Amazon FR…")
-        driver.get("https://www.amazon.fr")
-        time.sleep(random.uniform(4, 7))
-        print("  ✓ OK\n")
+    ok = 0
+    skip = 0
+    waf_hits = 0
 
-        ok = 0
-        skip = 0
-        for i, seller in enumerate(sellers, 1):
-            sid = seller.get("amazon_seller_id") or seller.get("seller_id")
-            name = seller.get("seller_name", sid)
-            seller_db_id = seller.get("seller_id")
+    # Warmup
+    print("Warmup session curl_cffi…")
+    _ = fetch_sp_page("A39I5QQX6478YU")
+    print("  ✓ OK\n")
 
-            if not sid:
-                skip += 1
-                continue
+    for i, seller in enumerate(sellers, 1):
+        sid = seller.get("amazon_seller_id") or seller.get("seller_id")
+        name = seller.get("seller_name", sid)
+        seller_db_id = seller.get("seller_id")
 
-            sp_url = f"https://www.amazon.fr/sp?seller={sid}"
-            print(f"[{i}/{len(sellers)}] {name[:45]} — {sid}")
+        if not sid:
+            skip += 1
+            continue
 
+        print(f"[{i}/{len(sellers)}] {name[:45]} — {sid}")
+
+        html = fetch_sp_page(sid)
+
+        if not html or len(html) < 5000:
+            print(f"  ⚠️  Page vide ou WAF — skip")
+            waf_hits += 1
+            skip += 1
+            time.sleep(random.uniform(4, 8))
+            continue
+
+        # Détecter WAF/CAPTCHA
+        if "robot" in html.lower() or "captcha" in html.lower() or "verify" in html.lower():
+            print(f"  ⚠️  WAF détecté — pause 30s")
+            waf_hits += 1
+            skip += 1
+            time.sleep(30)
+            continue
+
+        info = parse_sp_page(html)
+
+        # Merge criteres_detail existant avec les nouvelles infos légales
+        existing_cd = seller.get("criteres_detail") or {}
+        if isinstance(existing_cd, str):
             try:
-                html = safe_get(driver, sp_url, wait=5)
-            except (NoSuchWindowException, WebDriverException):
-                driver = restart_driver(driver)
-                try:
-                    html = safe_get(driver, sp_url, wait=5)
-                except Exception:
-                    skip += 1
-                    continue
+                existing_cd = json.loads(existing_cd)
+            except Exception:
+                existing_cd = {}
+        new_cd = {
+            **existing_cd,
+            "business_type":         info["business_type"],
+            "trade_register_number": info["trade_register_number"],
+            "vat_number":            info["vat_number"],
+            "business_address":      info["business_address"],
+            "enriched_at":           datetime.now().strftime("%Y-%m-%d"),
+        }
 
-            if not html or len(html) < 5000:
-                print(f"  ⚠️  Page vide ou trop courte")
-                skip += 1
-                continue
+        patch_data = {
+            "criteres_detail":  new_cd,
+            "scraped_email":    info["scraped_email"]    or None,
+            "email_source":     info["email_source"]     or None,
+            "email_confidence": info["email_confidence"] or None,
+            "scraped_phone":    info["scraped_phone"]    or None,
+            "phone_source":     info["phone_source"]     or None,
+            "phone_confidence": info["phone_confidence"] or None,
+        }
+        if info["business_name"] and not seller.get("business_name"):
+            patch_data["business_name"] = info["business_name"]
 
-            info = parse_sp_page(html)
+        success = patch_seller(seller_db_id, patch_data)
 
-            # Merge criteres_detail existant avec les nouvelles infos légales
-            existing_cd = seller.get("criteres_detail") or {}
-            if isinstance(existing_cd, str):
-                try:
-                    existing_cd = json.loads(existing_cd)
-                except Exception:
-                    existing_cd = {}
-            new_cd = {
-                **existing_cd,
-                "business_type":         info["business_type"],
-                "trade_register_number": info["trade_register_number"],
-                "vat_number":            info["vat_number"],
-                "business_address":      info["business_address"],
-                "enriched_at":           datetime.now().strftime("%Y-%m-%d"),
-            }
+        flags = []
+        if info["scraped_email"]:    flags.append(f"📧 {info['scraped_email']} ({info['email_confidence']})")
+        if info["scraped_phone"]:    flags.append(f"📞 {info['scraped_phone']}")
+        if info["business_name"]:    flags.append(f"🏢 {info['business_name'][:40]}")
+        if info["vat_number"]:       flags.append(f"TVA {info['vat_number']}")
+        if info["business_address"]: flags.append(f"📍 {info['business_address'][:50]}")
 
-            patch_data = {
-                "criteres_detail":  new_cd,
-                "scraped_email":    info["scraped_email"]    or None,
-                "email_source":     info["email_source"]     or None,
-                "email_confidence": info["email_confidence"] or None,
-                "scraped_phone":    info["scraped_phone"]    or None,
-                "phone_source":     info["phone_source"]     or None,
-                "phone_confidence": info["phone_confidence"] or None,
-            }
-            if info["business_name"] and not seller.get("business_name"):
-                patch_data["business_name"] = info["business_name"]
+        status = "✅" if success else "⚠️ patch failed"
+        print(f"  {status} {' | '.join(flags) if flags else 'aucune info légale trouvée'}")
 
-            success = patch_seller(seller_db_id, patch_data)
+        if success:
+            ok += 1
 
-            flags = []
-            if info["scraped_email"]:    flags.append(f"📧 {info['scraped_email']} ({info['email_confidence']})")
-            if info["scraped_phone"]:    flags.append(f"📞 {info['scraped_phone']}")
-            if info["business_name"]:    flags.append(f"🏢 {info['business_name'][:40]}")
-            if info["vat_number"]:       flags.append(f"TVA {info['vat_number']}")
-            if info["business_address"]: flags.append(f"📍 {info['business_address'][:50]}")
-
-            status = "✅" if success else "⚠️ patch failed"
-            print(f"  {status} {' | '.join(flags) if flags else 'aucune info légale trouvée'}")
-
-            if success:
-                ok += 1
-
-            time.sleep(random.uniform(2, 4))
-
-    finally:
-        try:
-            driver.quit()
-        except Exception:
-            pass
+        # Délai anti-ban adaptatif
+        delay = random.uniform(2, 4) if waf_hits == 0 else random.uniform(5, 10)
+        time.sleep(delay)
 
     print(f"\n{'='*60}")
     print(f"✅ {ok}/{len(sellers)} sellers enrichis")
-    print(f"⏭  {skip} ignorés (pas d'ID ou page vide)")
+    print(f"⏭  {skip} ignorés (pas d'ID, page vide ou WAF)")
+    print(f"🛡  {waf_hits} WAF/CAPTCHA hits")
     print('='*60)
 
 
