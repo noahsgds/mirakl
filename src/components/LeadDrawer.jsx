@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import {
   X, Star, ExternalLink, Mail, Linkedin, RefreshCw,
   AlertTriangle, CheckCircle2, Clock, Save, ChevronDown,
+  Target, ShoppingBag,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import StatusBadge from './StatusBadge'
 import ScoreBadge from './ScoreBadge'
 import RecoBadge from './RecoBadge'
 import EmailPreview from './EmailPreview'
+import { getCategory } from '../lib/categories'
 
 const ALL_STATUTS = [
   'A_SCORER', 'scored', 'enriched', 'sequence_en_cours', 'sequence_terminee',
@@ -304,10 +306,60 @@ export default function LeadDrawer({ sellerId, onClose }) {
               </div>
             )}
 
-            {/* 7. Données Amazon */}
+            {/* 7. Marketplaces */}
+            {data.amazon_sellers && (data.amazon_sellers.target_marketplaces?.length > 0 || data.amazon_sellers.present_marketplaces?.length > 0) && (
+              <div className="card space-y-4">
+                <h4 className="text-sm font-semibold text-text">Marketplaces</h4>
+
+                {data.amazon_sellers.target_marketplaces?.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Target size={13} className="text-[#E8445A]" />
+                      <p className="text-xs font-semibold text-muted uppercase">Cibles Mirakl ({data.amazon_sellers.target_marketplaces.length})</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {data.amazon_sellers.target_marketplaces.map((m) => (
+                        <span key={m} className="text-xs bg-[#E8445A]/10 text-[#E8445A] border border-[#E8445A]/20 px-2 py-0.5 rounded-full font-medium">
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {data.amazon_sellers.present_marketplaces?.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <ShoppingBag size={13} className="text-green-600" />
+                      <p className="text-xs font-semibold text-muted uppercase">Déjà présent sur ({data.amazon_sellers.present_marketplaces.length})</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {data.amazon_sellers.present_marketplaces.map((m) => (
+                        <span key={m} className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">
+                          ✓ {m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 8. Données Amazon */}
             {data.amazon_sellers && (
               <div className="card">
                 <h4 className="text-sm font-semibold text-text mb-3">Données Amazon</h4>
+                {data.amazon_sellers.category && (() => {
+                  const cat = getCategory(data.amazon_sellers.category)
+                  return (
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">{cat.emoji}</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cat.bg} ${cat.text} ${cat.border}`}>
+                        {cat.label}
+                      </span>
+                    </div>
+                  )
+                })()}
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><span className="text-muted">Produits</span><p className="font-medium">{data.amazon_sellers.nb_products?.toLocaleString() || '—'}</p></div>
                   <div><span className="text-muted">Avis</span><p className="font-medium">{data.amazon_sellers.nb_reviews?.toLocaleString() || '—'}</p></div>

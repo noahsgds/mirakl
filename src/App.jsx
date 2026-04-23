@@ -9,6 +9,7 @@ import ABTest from './pages/ABTest'
 import Errors from './pages/Errors'
 import Campaign from './pages/Campaign'
 import Scraping from './pages/Scraping'
+import Debug from './pages/Debug'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/abtest" element={<ABTest />} />
           <Route path="/erreurs" element={<Errors />} />
           <Route path="/campagne" element={<Campaign />} />
+          <Route path="/debug" element={<Debug />} />
         </Routes>
       </Layout>
     </BrowserRouter>
