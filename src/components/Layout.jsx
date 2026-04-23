@@ -92,35 +92,50 @@ function NotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((v) => !v)} className="relative p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-        <Bell size={18} className="text-white/70" />
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="relative p-2 rounded-lg hover:bg-white/10 transition-colors ring-1 ring-white/5 hover:ring-white/15"
+      >
+        <Bell size={16} className="text-white/75" />
         {notifs.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#E8445A] rounded-full text-white text-[9px] font-bold flex items-center justify-center">
+          <span
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-crimson-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-sidebar tnum"
+            style={{ boxShadow: '0 0 10px rgba(232,68,90,0.6)' }}
+          >
             {notifs.length > 9 ? '9+' : notifs.length}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-9 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <p className="text-sm font-semibold text-text">Notifications</p>
+        <div className="absolute right-0 top-11 w-80 bg-white rounded-2xl shadow-elevated border border-ink-100 z-50 overflow-hidden animate-fade-up">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-ink-100/80 bg-ink-50/40">
+            <div>
+              <p className="eyebrow">Activité</p>
+              <p className="text-sm font-semibold text-text mt-0.5">Notifications</p>
+            </div>
             {notifs.length > 0 && (
-              <button onClick={() => setNotifs([])} className="text-xs text-muted hover:text-text">Tout effacer</button>
+              <button onClick={() => setNotifs([])} className="text-2xs uppercase tracking-wider font-semibold text-muted hover:text-accent transition-colors">Tout effacer</button>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifs.length === 0 ? (
-              <div className="px-4 py-8 text-center text-muted text-sm">Aucune notification</div>
+              <div className="px-4 py-10 text-center">
+                <div className="inline-flex w-9 h-9 rounded-full bg-ink-50 items-center justify-center mb-2">
+                  <Bell size={14} className="text-ink-300" />
+                </div>
+                <p className="text-sm text-muted">Aucune notification</p>
+                <p className="text-2xs text-ink-300 mt-1">Tout est calme pour le moment.</p>
+              </div>
             ) : notifs.map((n, i) => (
-              <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'HOT' ? 'bg-red-100' : 'bg-green-100'}`}>
-                  {n.type === 'HOT' ? <Flame size={14} className="text-[#E8445A]" /> : <MessageSquare size={14} className="text-green-600" />}
+              <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-ink-100/60 last:border-b-0 hover:bg-ink-50/60 transition-colors">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${n.type === 'HOT' ? 'bg-crimson-50 text-crimson-500 ring-1 ring-crimson-100' : 'bg-green-50 text-green-600 ring-1 ring-green-100'}`}>
+                  {n.type === 'HOT' ? <Flame size={14} /> : <MessageSquare size={14} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text">{n.label}</p>
-                  <p className="text-xs text-muted">{n.ts.toLocaleTimeString('fr-FR')}</p>
+                  <p className="text-sm font-medium text-text leading-tight">{n.label}</p>
+                  <p className="text-2xs text-muted mt-0.5 tnum">{n.ts.toLocaleTimeString('fr-FR')}</p>
                 </div>
-                <button onClick={() => setNotifs((prev) => prev.filter((_, j) => j !== i))} className="text-muted hover:text-text">
+                <button onClick={() => setNotifs((prev) => prev.filter((_, j) => j !== i))} className="text-ink-300 hover:text-accent transition-colors">
                   <X size={14} />
                 </button>
               </div>
@@ -145,18 +160,26 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-60 flex-shrink-0 flex flex-col" style={{ background: '#1B3A5C' }}>
+      <aside className="w-64 flex-shrink-0 flex flex-col surface-dark relative overflow-hidden">
+        {/* Editorial top hairline */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-white/10">
+        <div className="relative px-5 py-5 border-b border-white/[0.07]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: accentColor }}>
-                {isC2 ? <Target size={16} className="text-white" /> : <Zap size={16} className="text-white" fill="white" />}
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center relative"
+                style={{
+                  background: `linear-gradient(135deg, ${accentColor} 0%, ${isC2 ? '#1E40AF' : '#CF2B43'} 100%)`,
+                  boxShadow: `0 8px 20px -6px ${accentColor}80, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                }}
+              >
+                {isC2 ? <Target size={17} className="text-white" /> : <Zap size={16} className="text-white" fill="white" />}
               </div>
-              <div>
-                <p className="text-white font-bold text-sm leading-tight">Mirakl Connect</p>
-                <p className="text-white/50 text-xs">{campaignLabel}</p>
+              <div className="min-w-0">
+                <p className="text-white font-display text-[17px] leading-none tracking-tight">Mirakl<span className="text-white/40">·</span>Connect</p>
+                <p className="text-white/45 text-2xs mt-1 uppercase tracking-[0.14em] font-medium">{campaignLabel}</p>
               </div>
             </div>
             <NotificationBell />
@@ -164,20 +187,21 @@ export default function Layout({ children }) {
         </div>
 
         {/* Campaign tabs */}
-        <div className="flex border-b border-white/10">
+        <div className="relative flex px-3 pt-3 pb-1 gap-1">
           {CAMPAIGNS.map(({ key, shortLabel }) => {
             const active = campaign === key
             const to = key === 'global' ? '/' : key === 'c2' ? '/c2' : '/dashboard'
+            const tabAccent = key === 'c2' ? '#2563EB' : '#E8445A'
             return (
               <button
                 key={key}
                 onClick={() => navigate(to)}
-                className={`flex-1 py-2 text-xs font-semibold transition-colors ${
+                className={`flex-1 py-1.5 rounded-md text-2xs font-semibold uppercase tracking-[0.12em] transition-all duration-200 ${
                   active
-                    ? 'text-white border-b-2'
-                    : 'text-white/35 hover:text-white/60'
+                    ? 'text-white bg-white/[0.08] ring-1 ring-white/10'
+                    : 'text-white/35 hover:text-white/70 hover:bg-white/[0.04]'
                 }`}
-                style={active ? { borderBottomColor: accentColor } : {}}
+                style={active ? { boxShadow: `inset 0 -2px 0 ${tabAccent}` } : {}}
               >
                 {shortLabel}
               </button>
@@ -186,42 +210,48 @@ export default function Layout({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="relative flex-1 px-4 py-3 space-y-0.5 overflow-y-auto">
+          <p className="eyebrow text-white/30 px-3 mb-2">Navigation</p>
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/' || to === '/c2' || to === '/dashboard'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/8'
-                }`
+                `nav-link ${isActive ? 'active' : ''}`
               }
             >
-              <Icon size={18} />
-              {label}
+              <Icon size={16} className="opacity-80" />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-white/10">
-          {isC2 ? (
-            <>
-              <p className="text-white/30 text-xs">Campagne 2 · Sales outreach</p>
-              <p className="text-white/20 text-xs">Matching sellers → marketplaces</p>
-            </>
-          ) : (
-            <>
-              <p className="text-white/30 text-xs">Amazon FR → 8 marketplaces</p>
-              <p className="text-white/20 text-xs">Mode · Beauté · Maison · Sport · +4</p>
-            </>
-          )}
+        <div className="relative px-5 py-4 border-t border-white/[0.07]">
+          <div className="flex items-start gap-2">
+            <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: accentColor, boxShadow: `0 0 8px ${accentColor}` }} />
+            <div className="min-w-0">
+              {isC2 ? (
+                <>
+                  <p className="text-white/70 text-2xs font-medium leading-tight">Campagne 2 · Sales outreach</p>
+                  <p className="text-white/35 text-2xs mt-1 leading-snug">Matching sellers → marketplaces</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-white/70 text-2xs font-medium leading-tight">Amazon FR → 8 marketplaces</p>
+                  <p className="text-white/35 text-2xs mt-1 leading-snug">Mode · Beauté · Maison · Sport · +4</p>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 px-8 py-8 overflow-auto">
+          <div className="max-w-[1400px] mx-auto animate-fade-in">{children}</div>
+        </main>
       </div>
     </div>
   )

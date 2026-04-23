@@ -1,15 +1,22 @@
 const STYLES = {
-  QUALIFIE: 'bg-green-100 text-green-700 border border-green-200',
-  A_REVOIR: 'bg-amber-100 text-amber-700 border border-amber-200',
-  REJETE: 'bg-red-100 text-red-600 border border-red-200',
+  QUALIFIE: { bg: 'bg-emerald-50', fg: 'text-emerald-700', ring: 'ring-emerald-200/70', dot: '#10B981' },
+  A_REVOIR: { bg: 'bg-amber-50',   fg: 'text-amber-700',   ring: 'ring-amber-200/70',   dot: '#D97706' },
+  REJETE:   { bg: 'bg-rose-50',    fg: 'text-rose-600',    ring: 'ring-rose-200/70',    dot: '#E11D48' },
+}
+
+const LABELS = {
+  QUALIFIE: 'Qualifié',
+  A_REVOIR: 'À revoir',
+  REJETE:   'Rejeté',
 }
 
 export default function RecoBadge({ value }) {
-  if (!value) return <span className="text-gray-400 text-xs">—</span>
-  const style = STYLES[value] || 'bg-gray-100 text-gray-600'
+  if (!value) return <span className="text-ink-300 text-xs">—</span>
+  const s = STYLES[value] || { bg: 'bg-ink-50', fg: 'text-ink-500', ring: 'ring-ink-100', dot: '#94A3B8' }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${style}`}>
-      {value}
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-wide ring-1 ring-inset ${s.bg} ${s.fg} ${s.ring}`}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
+      {LABELS[value] || value}
     </span>
   )
 }
