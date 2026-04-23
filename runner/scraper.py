@@ -906,8 +906,24 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True,
         asin_goal = max(target * 5, 200)
         # Pour >200 sellers, on pagine chaque query pour multiplier les ASINs
         pages_per_query = 3 if target >= 200 else 1
+
+        # Circuit breaker: si Amazon bloque l'IP (5 queries vides d'affilée),
+        # on abandonne Phase A et on tente Phase B/C avec ce qu'on a déjà.
+        consecutive_empty = 0
+        EMPTY_CIRCUIT_BREAKER = 5
+        phase_a_start = time.time()
+        PHASE_A_HARD_TIMEOUT_SEC = 20 * 60  # 20 min max sur Phase A
+
         for query in queries:
             if len(asin_queue) >= asin_goal:
+                break
+            if consecutive_empty >= EMPTY_CIRCUIT_BREAKER:
+                print(f"  ⚠ Circuit breaker Phase A — {consecutive_empty} queries vides d'affilée. "
+                      f"Amazon bloque probablement l'IP. On passe à Phase B avec {len(asin_queue)} ASINs.")
+                break
+            if time.time() - phase_a_start > PHASE_A_HARD_TIMEOUT_SEC:
+                print(f"  ⚠ Timeout Phase A ({PHASE_A_HARD_TIMEOUT_SEC//60} min). "
+                      f"On passe à Phase B avec {len(asin_queue)} ASINs.")
                 break
             print(f"  Search: '{query}' (pages={pages_per_query})")
             try:
@@ -918,11 +934,19 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True,
                     asins = get_asins(driver, query, pages=pages_per_query)
                 except Exception:
                     asins = []
-            asin_queue.extend(a for a in asins if a not in asin_queue)
+            new_asins = [a for a in asins if a not in asin_queue]
+            asin_queue.extend(new_asins)
             print(f"  → {len(asins)} ASINs | total: {len(asin_queue)}")
+            if len(new_asins) == 0:
+                consecutive_empty += 1
+            else:
+                consecutive_empty = 0
             time.sleep(random.uniform(1.5, 3))
 
         print(f"\n→ {len(asin_queue)} ASINs\n")
+        if not asin_queue:
+            print("⚠ Phase A n'a récolté aucun ASIN — abort.")
+            return []
 
         # ── Phase B — Sellers tiers (parallèle si parallel > 1) ──────────────
         print(f"Phase B — Extraction vendeurs tiers (parallel={parallel})\n")
