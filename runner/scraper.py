@@ -389,6 +389,13 @@ def check_zalando(seller_name: str) -> tuple[bool, str]:
 # Driver
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Serialize driver startup. undetected-chromedriver renames its patched
+# binary during initialization — two workers booting simultaneously race
+# on the rename and one crashes (status -11). Holding this lock during
+# uc.Chrome() construction forces the workers to boot one at a time.
+_driver_init_lock = threading.Lock()
+
+
 def make_driver():
     import os, tempfile
     headless = os.environ.get("SCRAPER_HEADLESS", "0") == "1"
@@ -402,7 +409,8 @@ def make_driver():
     chrome_bin = os.environ.get("CHROME_BIN")
     if chrome_bin:
         opts.binary_location = chrome_bin
-    d = uc.Chrome(options=opts, headless=headless)
+    with _driver_init_lock:
+        d = uc.Chrome(options=opts, headless=headless)
     d.set_page_load_timeout(30)
     return d
 
