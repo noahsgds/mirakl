@@ -18,6 +18,7 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/scraping" element={<Scraping />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/inbox" element={<Inbox />} />
