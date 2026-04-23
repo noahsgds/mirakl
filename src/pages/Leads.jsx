@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Search, ChevronLeft, ChevronRight, ExternalLink, Filter, X, Download, Upload, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, ExternalLink, Filter, X, Download, Upload, RefreshCw, CheckCircle2, Zap, Mail, Send } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import StatusBadge from '../components/StatusBadge'
 import ScoreBadge from '../components/ScoreBadge'
@@ -71,6 +71,9 @@ export default function Leads() {
   const [page, setPage]         = useState(0)
   const [loading, setLoading]   = useState(true)
   const [selectedId, setSelectedId] = useState(null)
+  const [checkedIds, setCheckedIds] = useState(new Set())
+  const [launching, setLaunching]   = useState(null)
+  const [launchResult, setLaunchResult] = useState(null)
 
   const [filters, setFilters] = useState({
     statuts: [], recommandation: '', scoreMin: '', contexte: '', variant: '', category: '', search: '',
@@ -137,6 +140,50 @@ export default function Leads() {
 
   const hasFilters = filters.statuts.length > 0 || filters.recommandation || filters.scoreMin || filters.contexte || filters.variant || filters.category || filters.search
   const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  function toggleCheck(id, e) {
+    e.stopPropagation()
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleCheckAll(e) {
+    e.stopPropagation()
+    if (rows.every(r => checkedIds.has(r.seller_id))) {
+      setCheckedIds(prev => {
+        const next = new Set(prev)
+        rows.forEach(r => next.delete(r.seller_id))
+        return next
+      })
+    } else {
+      setCheckedIds(prev => {
+        const next = new Set(prev)
+        rows.forEach(r => next.add(r.seller_id))
+        return next
+      })
+    }
+  }
+
+  async function launchWebhook(workflow) {
+    setLaunching(workflow)
+    setLaunchResult(null)
+    try {
+      const res = await fetch(`/api/n8n?workflow=${workflow}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_ids: [...checkedIds], triggered_from: 'leads_selection' }),
+      })
+      const text = await res.text()
+      setLaunchResult({ ok: res.ok, workflow, count: checkedIds.size })
+      setTimeout(() => setLaunchResult(null), 4000)
+    } catch (e) {
+      setLaunchResult({ ok: false, error: e.message })
+    }
+    setLaunching(null)
+  }
 
   async function handleExport() {
     const { data } = await supabase
@@ -412,6 +459,14 @@ export default function Leads() {
           <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
+                <th style={{ padding: '10px 14px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', width: '36px' }}>
+                  <input
+                    type="checkbox"
+                    checked={rows.length > 0 && rows.every(r => checkedIds.has(r.seller_id))}
+                    onChange={toggleCheckAll}
+                    style={{ cursor: 'pointer', accentColor: '#2764ff' }}
+                  />
+                </th>
                 {['Vendeur', 'Décideur', 'Score', 'Recommandation', 'Catégorie', 'Statut', 'Séq.', 'A/B', 'Date'].map((h) => (
                   <TH key={h}>{h}</TH>
                 ))}
@@ -420,13 +475,13 @@ export default function Leads() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: 'var(--text-3)' }}>
+                  <td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: 'var(--text-3)' }}>
                     Chargement…
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: 'var(--text-3)' }}>
+                  <td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: 'var(--text-3)' }}>
                     Aucun lead trouvé
                   </td>
                 </tr>
@@ -437,12 +492,21 @@ export default function Leads() {
                   style={{
                     borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(16,43,73,0.02)',
+                    background: checkedIds.has(r.seller_id) ? 'rgba(39,100,255,0.06)' : idx % 2 === 0 ? 'transparent' : 'rgba(16,43,73,0.02)',
                     transition: 'background 0.1s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(39,100,255,0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(16,43,73,0.02)'}
+                  onMouseEnter={e => { if (!checkedIds.has(r.seller_id)) e.currentTarget.style.background = 'rgba(39,100,255,0.05)' }}
+                  onMouseLeave={e => { if (!checkedIds.has(r.seller_id)) e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(16,43,73,0.02)' }}
                 >
+                  {/* Checkbox */}
+                  <td style={{ padding: '10px 14px' }} onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.has(r.seller_id)}
+                      onChange={e => toggleCheck(r.seller_id, e)}
+                      style={{ cursor: 'pointer', accentColor: '#2764ff' }}
+                    />
+                  </td>
                   {/* Vendeur */}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <div className="flex items-center gap-1.5" style={{ maxWidth: '180px' }}>
@@ -633,6 +697,80 @@ export default function Leads() {
       </div>
 
       <LeadDrawer sellerId={selectedId} onClose={() => setSelectedId(null)} />
+
+      {/* Barre d'actions flottante */}
+      {checkedIds.size > 0 && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl"
+          style={{
+            background: '#102b49',
+            boxShadow: '0 8px 32px rgba(16,43,73,0.3)',
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap' }}>
+            {checkedIds.size} lead{checkedIds.size > 1 ? 's' : ''} sélectionné{checkedIds.size > 1 ? 's' : ''}
+          </span>
+          <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)' }} />
+          {[
+            { workflow: 'lancer-enrichissement', label: 'Enrichir',  Icon: Zap  },
+            { workflow: 'lancer-generation',     label: 'Générer',   Icon: Mail },
+            { workflow: 'lancer-sequence',       label: 'Séquence',  Icon: Send },
+          ].map(({ workflow, label, Icon }) => (
+            <button
+              key={workflow}
+              onClick={() => launchWebhook(workflow)}
+              disabled={!!launching}
+              className="flex items-center gap-1.5 transition-all disabled:opacity-50"
+              style={{
+                padding: '6px 14px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 600,
+                fontFamily: 'Outfit, sans-serif',
+                background: launching === workflow ? 'rgba(39,100,255,0.4)' : 'rgba(39,100,255,0.25)',
+                color: '#ffffff',
+                border: '1px solid rgba(39,100,255,0.5)',
+                cursor: launching ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {launching === workflow
+                ? <RefreshCw size={11} className="animate-spin" />
+                : <Icon size={11} />
+              }
+              {label}
+            </button>
+          ))}
+          <button
+            onClick={() => setCheckedIds(new Set())}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Toast résultat */}
+      {launchResult && (
+        <div
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
+          style={{
+            background: launchResult.ok ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)',
+            border: `1px solid ${launchResult.ok ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)'}`,
+            color: launchResult.ok ? '#16a34a' : '#dc2626',
+            boxShadow: '0 4px 16px rgba(16,43,73,0.1)',
+          }}
+        >
+          <CheckCircle2 size={14} />
+          {launchResult.ok
+            ? `Workflow lancé pour ${launchResult.count} lead${launchResult.count > 1 ? 's' : ''}`
+            : `Erreur : ${launchResult.error}`
+          }
+        </div>
+      )}
     </div>
   )
 }
