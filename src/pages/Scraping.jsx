@@ -15,6 +15,7 @@ import {
   CheckCheck,
   Target,
   Zap,
+  AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { CATEGORIES, getCategory, categoryLabel } from '../lib/categories'
@@ -94,6 +95,7 @@ export default function Scraping() {
   })
   const [toast, setToast] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState(null)
 
   async function loadAll() {
     setLoading(true)
@@ -158,25 +160,80 @@ export default function Scraping() {
     return () => supabase.removeChannel(channel)
   }, [])
 
-  async function launch(overrides = {}) {
-    setLaunching(true)
+  const activeJobsByCategory = useMemo(() => {
+    const map = {}
+    for (const j of jobs) {
+      if (j.status === 'pending' || j.status === 'running') {
+        if (!map[j.category]) map[j.category] = j
+      }
+    }
+    return map
+  }, [jobs])
+
+  function requestLaunch(overrides = {}) {
     const payload = {
       category: overrides.category || form.category,
       target_count: overrides.target_count ?? form.target_count,
       parallel: overrides.parallel ?? form.parallel,
       skip_existing: overrides.skip_existing ?? form.skip_existing,
+    }
+    const active = activeJobsByCategory[payload.category]
+    if (active) {
+      const cat = getCategory(payload.category)
+      const statusLabel = active.status === 'running' ? 'en cours' : 'en attente'
+      setToast({
+        type: 'error',
+        msg: `Un scraping ${cat.label} ${cat.emoji} est déjà ${statusLabel} (créé ${fmtDate(active.created_at)}). Attends qu'il finisse.`,
+      })
+      setTimeout(() => setToast(null), 5000)
+      return
+    }
+    setPendingConfirm(payload)
+  }
+
+  async function confirmLaunch() {
+    if (!pendingConfirm) return
+    setLaunching(true)
+    const { data: existing, error: checkErr } = await supabase
+      .from('scraping_jobs')
+      .select('id, status, created_at')
+      .eq('category', pendingConfirm.category)
+      .in('status', ['pending', 'running'])
+      .limit(1)
+
+    if (checkErr) {
+      setLaunching(false)
+      setToast({ type: 'error', msg: `Erreur vérif : ${checkErr.message}` })
+      setTimeout(() => setToast(null), 4000)
+      return
+    }
+    if (existing && existing.length > 0) {
+      setLaunching(false)
+      setPendingConfirm(null)
+      const cat = getCategory(pendingConfirm.category)
+      setToast({
+        type: 'error',
+        msg: `Job ${cat.label} déjà actif — lancement bloqué pour éviter un doublon.`,
+      })
+      setTimeout(() => setToast(null), 5000)
+      loadAll()
+      return
+    }
+
+    const { error } = await supabase.from('scraping_jobs').insert({
+      ...pendingConfirm,
       status: 'pending',
       triggered_by: 'dashboard',
-    }
-    const { error } = await supabase.from('scraping_jobs').insert(payload)
+    })
     setLaunching(false)
+    setPendingConfirm(null)
     if (error) {
       setToast({ type: 'error', msg: `Erreur : ${error.message}` })
     } else {
-      const cat = getCategory(payload.category)
+      const cat = getCategory(pendingConfirm.category)
       setToast({
         type: 'ok',
-        msg: `Job créé : ${payload.target_count} sellers ${cat.label} ${cat.emoji} — le runner va le lancer.`,
+        msg: `Job créé : ${pendingConfirm.target_count} sellers ${cat.label} ${cat.emoji} — le runner va le lancer.`,
       })
       loadAll()
     }
@@ -250,6 +307,8 @@ export default function Scraping() {
             const count = categoryCounts[c.key] || 0
             const pct = sellerStats.total ? Math.round((count / sellerStats.total) * 100) : 0
             const isSelected = form.category === c.key
+            const activeJob = activeJobsByCategory[c.key]
+            const isBusy = Boolean(activeJob)
             return (
               <div
                 key={c.key}
@@ -262,7 +321,7 @@ export default function Scraping() {
                     setForm({ ...form, category: c.key })
                   }
                 }}
-                className={`cursor-pointer text-left p-4 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/30 ${
+                className={`relative cursor-pointer text-left p-4 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/30 ${
                   isSelected
                     ? 'border-[#1B3A5C] bg-[#1B3A5C]/5 shadow-sm'
                     : 'border-gray-100 hover:border-gray-300 bg-white'
@@ -270,7 +329,14 @@ export default function Scraping() {
               >
                 <div className="flex items-start justify-between mb-2">
                   <span className="text-2xl">{c.emoji}</span>
-                  <span className="text-xs text-gray-400">{pct}%</span>
+                  {isBusy ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                      <Loader2 size={10} className="animate-spin" />
+                      {activeJob.status === 'running' ? 'En cours' : 'En file'}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">{pct}%</span>
+                  )}
                 </div>
                 <p className="text-sm font-semibold text-gray-900">{c.label}</p>
                 <p className="text-xl font-bold text-[#1B3A5C] mt-1">{count}</p>
@@ -281,13 +347,27 @@ export default function Scraping() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    launch({ category: c.key })
+                    requestLaunch({ category: c.key })
                   }}
-                  disabled={launching}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold text-white bg-[#E8445A] hover:bg-[#d13a4f] rounded-md disabled:opacity-60"
+                  disabled={launching || isBusy}
+                  title={isBusy ? 'Un job est déjà actif pour cette catégorie' : `Scraper ${c.label}`}
+                  className={`mt-3 w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold rounded-md disabled:cursor-not-allowed ${
+                    isBusy
+                      ? 'bg-gray-200 text-gray-500'
+                      : 'text-white bg-[#E8445A] hover:bg-[#d13a4f] disabled:opacity-60'
+                  }`}
                 >
-                  <Zap size={11} />
-                  Scraper
+                  {isBusy ? (
+                    <>
+                      <Loader2 size={11} className="animate-spin" />
+                      Déjà lancé
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={11} />
+                      Scraper
+                    </>
+                  )}
                 </button>
               </div>
             )
@@ -354,12 +434,16 @@ export default function Scraping() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => launch()}
-              disabled={launching}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E8445A] hover:bg-[#d13a4f] text-white font-semibold rounded-lg transition-colors disabled:opacity-60"
+              onClick={() => requestLaunch()}
+              disabled={launching || Boolean(activeJobsByCategory[form.category])}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E8445A] hover:bg-[#d13a4f] text-white font-semibold rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {launching ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="white" />}
-              {launching ? 'Création du job…' : `Lancer — ${selectedCat.label}`}
+              {launching
+                ? 'Création du job…'
+                : activeJobsByCategory[form.category]
+                ? `${selectedCat.label} déjà en cours`
+                : `Lancer — ${selectedCat.label}`}
             </button>
 
             <button
@@ -492,6 +576,78 @@ export default function Scraping() {
           )}
         </div>
       </div>
+
+      {pendingConfirm && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => !launching && setPendingConfirm(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Confirmer le lancement</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Le scraper va interroger Amazon FR pendant ~15-25 minutes.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Catégorie</span>
+                <span className="font-semibold text-gray-900">
+                  {getCategory(pendingConfirm.category).emoji} {getCategory(pendingConfirm.category).label}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Nb sellers cible</span>
+                <span className="font-semibold text-gray-900">{pendingConfirm.target_count}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Workers parallèles</span>
+                <span className="font-semibold text-gray-900">{pendingConfirm.parallel}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Skip doublons</span>
+                <span className="font-semibold text-gray-900">
+                  {pendingConfirm.skip_existing ? 'Oui' : 'Non'}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-5">
+              Un seul job par catégorie peut tourner à la fois — un double-clic sera bloqué côté
+              serveur.
+            </p>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setPendingConfirm(null)}
+                disabled={launching}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-60"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmLaunch}
+                disabled={launching}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#E8445A] hover:bg-[#d13a4f] rounded-lg disabled:opacity-60"
+              >
+                {launching ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="white" />}
+                {launching ? 'Création…' : 'Lancer le scraping'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

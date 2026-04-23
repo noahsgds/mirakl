@@ -1,0 +1,11 @@
+app = 'mirakl-runner-hackathon'
+primary_region = 'cdg'
+
+[env]
+  SCRAPER_HEADLESS = '1'
+  POLL_SECONDS = '15'
+
+[[vm]]
+  memory = '2gb'
+  cpu_kind = 'shared'
+  cpus = 1
