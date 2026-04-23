@@ -86,6 +86,12 @@ class Seller:
     nb_sales_30d:        int   = 0
     country:             str   = ""
     business_name:       str   = ""
+    business_type:       str   = ""        # Type d'activité (ex: Entreprise privée)
+    trade_register_number: str = ""        # Numéro de registre de commerce
+    vat_number:          str   = ""        # Numéro TVA
+    phone:               str   = ""        # Numéro de téléphone
+    email:               str   = ""        # E-mail vendeur
+    business_address:    str   = ""        # Adresse commerciale complète
     seller_language:     str   = "en"
     years_on_amazon:     int   = 0
     member_since:        str   = ""
@@ -101,42 +107,55 @@ class Seller:
     def to_row(self) -> dict:
         return {
             # ── Identité ──────────────────────────────────────────
-            "amazon_seller_id":      self.amazon_seller_id,
-            "seller_name":           self.seller_name,
-            "seller_url":            self.seller_url,
-            "categories":            self.categories,
-            "country":               self.country or None,
-            "seller_language":       self.seller_language,
-            "business_name":         self.business_name or None,
+            "amazon_seller_id":       self.amazon_seller_id,
+            "seller_name":            self.seller_name,
+            "seller_url":             self.seller_url,
+            "categories":             self.categories,
+            "country":                self.country or None,
+            "seller_language":        self.seller_language,
+            "business_name":          self.business_name or None,
+            # ── Infos légales vendeur ─────────────────────────────
+            "business_type":          self.business_type or None,
+            "trade_register_number":  self.trade_register_number or None,
+            "vat_number":             self.vat_number or None,
+            "phone":                  self.phone or None,
+            "email":                  self.email or None,
+            "business_address":       self.business_address or None,
             # ── Métriques Amazon ──────────────────────────────────
-            "nb_products":           self.nb_products or None,
-            "rating":                self.rating or None,
-            "nb_reviews":            self.nb_reviews or None,
-            "positive_feedback_pct": self.positive_feedback_pct or None,
-            "avg_price":             self.avg_price or None,
-            "nb_sales_30d":          self.nb_sales_30d or None,
-            "years_on_amazon":       self.years_on_amazon or None,
-            "member_since":          self.member_since or None,
-            "response_time":         self.response_time or None,
+            "nb_products":            self.nb_products or None,
+            "rating":                 self.rating or None,
+            "nb_reviews":             self.nb_reviews or None,
+            "positive_feedback_pct":  self.positive_feedback_pct or None,
+            "avg_price":              self.avg_price or None,
+            "nb_sales_30d":           self.nb_sales_30d or None,
+            "years_on_amazon":        self.years_on_amazon or None,
+            "member_since":           self.member_since or None,
+            "response_time":          self.response_time or None,
             # ── Présence Zalando ──────────────────────────────────
-            "on_zalando":            self.on_zalando,
-            "zalando_url":           self.zalando_url or None,
-            "company_website":       self.zalando_url if self.on_zalando else None,
-            "min_price":             self.min_price or None,
-            "max_price":             self.max_price or None,
-            "top_brands":            self.top_brands or None,
-            "is_fba":                self.is_fba,
-            "has_own_website":       self.has_own_website,
+            "on_zalando":             self.on_zalando,
+            "zalando_url":            self.zalando_url or None,
+            "company_website":        self.zalando_url if self.on_zalando else None,
+            "min_price":              self.min_price or None,
+            "max_price":              self.max_price or None,
+            "top_brands":             self.top_brands or None,
+            "is_fba":                 self.is_fba,
+            "has_own_website":        self.has_own_website,
             # ── Pipeline ─────────────────────────────────────────
             "source":    "amazon_scraper",
             "statut":    "to_enrich",
             "enriched":  False,
             # ── Détails bruts (pour Dust/N8N) ─────────────────────
             "criteres_detail": {
-                "amazon_seller_id": self.amazon_seller_id,
-                "business_name":    self.business_name,
-                "on_zalando":       self.on_zalando,
-                "scrape_date":      datetime.now().strftime("%Y-%m-%d"),
+                "amazon_seller_id":      self.amazon_seller_id,
+                "business_name":         self.business_name,
+                "business_type":         self.business_type,
+                "trade_register_number": self.trade_register_number,
+                "vat_number":            self.vat_number,
+                "phone":                 self.phone,
+                "email":                 self.email,
+                "business_address":      self.business_address,
+                "on_zalando":            self.on_zalando,
+                "scrape_date":           datetime.now().strftime("%Y-%m-%d"),
             },
         }
 
@@ -408,6 +427,88 @@ def enrich(driver, seller_id: str, raw_name: str) -> "Seller":
                 s.response_time = val
                 break
 
+        # ── Informations légales (section "Informations vendeur détaillées") ──
+        # Nom commercial
+        for label in ["Nom commercial :", "Nom commercial:", "Trade name :", "Trade name:"]:
+            val = extract_between(page_text, label, 120)
+            if val:
+                s.business_name = val  # overrides "Raison sociale" if present
+                break
+
+        # Type d'activité
+        for label in ["Type d'activité :", "Type d'activité:", "Business type :", "Business type:"]:
+            val = extract_between(page_text, label, 80)
+            if val:
+                s.business_type = val
+                break
+
+        # Numéro de registre de commerce
+        for label in ["Numéro de registre de commerce :", "Numéro de registre de commerce:",
+                      "Company register number :", "Company register number:"]:
+            val = extract_between(page_text, label, 60)
+            if val:
+                s.trade_register_number = val
+                break
+        if not s.trade_register_number:
+            # fallback: ligne qui suit un numéro d'enregistrement connu
+            m = re.search(r"(?:registre|register)[^\n]{0,50}:\s*([A-Z0-9]{6,30})", page_text, re.I)
+            if m:
+                s.trade_register_number = m.group(1).strip()
+
+        # Numéro TVA
+        for label in ["Numéro TVA :", "Numéro TVA:", "VAT number :", "VAT number:", "TVA :"]:
+            val = extract_between(page_text, label, 30)
+            if val:
+                s.vat_number = val
+                break
+        if not s.vat_number:
+            m = re.search(r"\b(FR\d{11}|DE\d{9}|GB\d{9}|IT\d{11}|ES[A-Z0-9]{9})\b", page_text)
+            if m:
+                s.vat_number = m.group(1)
+
+        # Numéro de téléphone
+        for label in ["Numéro de téléphone :", "Numéro de téléphone:", "Phone number :", "Phone number:"]:
+            val = extract_between(page_text, label, 30)
+            if val:
+                s.phone = val
+                break
+        if not s.phone:
+            m = re.search(r"(\+\d[\d\s\-]{7,20})", page_text)
+            if m:
+                s.phone = m.group(1).strip()
+
+        # E-mail
+        for label in ["E-mail :", "E-mail:", "Email :", "Email:"]:
+            val = extract_between(page_text, label, 80)
+            if val:
+                s.email = val.split()[0]  # pas d'espace dans un email
+                break
+        if not s.email:
+            m = re.search(r"\b([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})\b", page_text)
+            if m:
+                s.email = m.group(1)
+
+        # Adresse commerciale (multi-ligne)
+        ADDR_STOP = ["Ce vendeur", "This seller", "Membre depuis", "Member since",
+                     "Nom commercial", "Type d'activité", "Numéro", "Avis "]
+        addr_idx = -1
+        for label in ["Adresse commerciale :", "Adresse commerciale:", "Business address :", "Business address:"]:
+            idx = page_text.find(label)
+            if idx >= 0:
+                addr_idx = idx + len(label)
+                break
+        if addr_idx >= 0:
+            addr_block = page_text[addr_idx: addr_idx + 400]
+            addr_lines = [l.strip() for l in addr_block.split("\n") if l.strip()]
+            collected = []
+            for line in addr_lines:
+                if any(line.startswith(stop) for stop in ADDR_STOP):
+                    break
+                collected.append(line)
+                if len(collected) >= 8:
+                    break
+            s.business_address = ", ".join(collected)
+
     # ── Page catalogue du vendeur (/s?me=ID) ─────────────────────────────────
     try:
         html2 = safe_get(driver, f"https://www.amazon.fr/s?me={seller_id}&marketplaceID=A13V1IB3VIYZZH", wait=3)
@@ -513,28 +614,34 @@ def save(sellers: list, intermediate=False):
         df.to_csv(OUTPUT_DIR / "latest.csv", index=False, encoding="utf-8-sig")
         # CSV propre pour présentation (colonnes FR, sans JSON)
         clean = pd.DataFrame([{
-            "Nom_Vendeur":         s.seller_name,
-            "ID_Amazon":           s.amazon_seller_id,
-            "URL_Profil":          s.seller_url,
-            "Raison_Sociale":      s.business_name or "N/A",
-            "Pays":                s.country or "N/A",
-            "Langue":              s.seller_language,
-            "Membre_depuis":       s.member_since or "N/A",
-            "Ancienneté_ans":      s.years_on_amazon or "N/A",
-            "Délai_réponse":       s.response_time or "N/A",
-            "Categories":          s.categories,
-            "Top_Marques":         s.top_brands or "N/A",
-            "Nb_Produits":         s.nb_products or "N/A",
-            "Note":                f"{s.rating:.1f}" if s.rating else "N/A",
-            "Feedback_Positif_%":  f"{s.positive_feedback_pct:.0f}%" if s.positive_feedback_pct else "N/A",
-            "Nb_Avis_12mois":      s.nb_reviews or "N/A",
-            "Ventes_30j_estimées": s.nb_sales_30d or "N/A",
-            "Prix_Min_EUR":        f"{s.min_price:.2f} €" if s.min_price else "N/A",
-            "Prix_Moyen_EUR":      f"{s.avg_price:.2f} €" if s.avg_price else "N/A",
-            "Prix_Max_EUR":        f"{s.max_price:.2f} €" if s.max_price else "N/A",
-            "FBA":                 "Oui" if s.is_fba else "Non",
-            "Sur_Zalando":         "Oui" if s.on_zalando else "Non",
-            "URL_Zalando":         s.zalando_url or "",
+            "Nom_Vendeur":              s.seller_name,
+            "ID_Amazon":                s.amazon_seller_id,
+            "URL_Profil":               s.seller_url,
+            "Nom_Commercial":           s.business_name or "N/A",
+            "Type_Activité":            s.business_type or "N/A",
+            "Num_Registre_Commerce":    s.trade_register_number or "N/A",
+            "Num_TVA":                  s.vat_number or "N/A",
+            "Téléphone":                s.phone or "N/A",
+            "Email":                    s.email or "N/A",
+            "Adresse_Commerciale":      s.business_address or "N/A",
+            "Pays":                     s.country or "N/A",
+            "Langue":                   s.seller_language,
+            "Membre_depuis":            s.member_since or "N/A",
+            "Ancienneté_ans":           s.years_on_amazon or "N/A",
+            "Délai_réponse":            s.response_time or "N/A",
+            "Categories":               s.categories,
+            "Top_Marques":              s.top_brands or "N/A",
+            "Nb_Produits":              s.nb_products or "N/A",
+            "Note":                     f"{s.rating:.1f}" if s.rating else "N/A",
+            "Feedback_Positif_%":       f"{s.positive_feedback_pct:.0f}%" if s.positive_feedback_pct else "N/A",
+            "Nb_Avis_12mois":           s.nb_reviews or "N/A",
+            "Ventes_30j_estimées":      s.nb_sales_30d or "N/A",
+            "Prix_Min_EUR":             f"{s.min_price:.2f} €" if s.min_price else "N/A",
+            "Prix_Moyen_EUR":           f"{s.avg_price:.2f} €" if s.avg_price else "N/A",
+            "Prix_Max_EUR":             f"{s.max_price:.2f} €" if s.max_price else "N/A",
+            "FBA":                      "Oui" if s.is_fba else "Non",
+            "Sur_Zalando":              "Oui" if s.on_zalando else "Non",
+            "URL_Zalando":              s.zalando_url or "",
         } for s in sellers])
         clean.to_csv(OUTPUT_DIR / "latest_clean.csv", index=False, encoding="utf-8-sig")
         print(f"  📊 CSV clean: output/latest_clean.csv")
