@@ -55,12 +55,15 @@ const WEBHOOKS = [
 ]
 
 const STAGE_TABS = [
-  { key: 'scored',   label: 'Scorés',    color: 'text-amber-700',  dot: 'bg-amber-400'  },
-  { key: 'enriched', label: 'Enrichis',  color: 'text-purple-700', dot: 'bg-purple-500' },
-  { key: 'sequence', label: 'Séquence',  color: 'text-blue-700',   dot: 'bg-blue-500'   },
+  { key: 'a_scorer',  label: 'À scorer',  color: 'text-gray-700',   dot: 'bg-gray-400'   },
+  { key: 'scored',    label: 'Scorés',    color: 'text-amber-700',  dot: 'bg-amber-400'  },
+  { key: 'enriched',  label: 'Enrichis',  color: 'text-purple-700', dot: 'bg-purple-500' },
+  { key: 'sequence',  label: 'Séquence',  color: 'text-blue-700',   dot: 'bg-blue-500'   },
+  { key: 'failed',    label: 'Erreurs',   color: 'text-red-700',    dot: 'bg-red-400'    },
 ]
 
 const SEQ_STATUTS = ['sequence_en_cours', 'sequence_terminee', 'HOT', 'REPLIED', 'BOUNCE', 'UNSUBSCRIBED']
+const FAILED_STATUTS = ['enrichment_failed', 'enrichment_failed_final', 'generation_failed']
 
 /* ─── Inline editable cell ────────────────────────────── */
 function InlineCell({ value, onSave, placeholder = '—', icon: Icon }) {
@@ -338,10 +341,11 @@ function WebhookCard({ wh, count, onLaunch }) {
 
 /* ─── Main Pipeline component ─────────────────────────── */
 export default function Pipeline() {
-  const [tab, setTab] = useState('scored')
+  const [tab, setTab] = useState('a_scorer')
   const [rows, setRows] = useState([])
-  const [counts, setCounts] = useState({ scored: 0, enriched: 0, sequence: 0 })
+  const [counts, setCounts] = useState({ a_scorer: 0, scored: 0, enriched: 0, sequence: 0, failed: 0 })
   const [loading, setLoading] = useState(true)
+  const [queryError, setQueryError] = useState(null)
   const [enrichTarget, setEnrichTarget] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
 
@@ -355,30 +359,38 @@ export default function Pipeline() {
       return acc
     }, {})
     setCounts({
+      a_scorer: c['A_SCORER'] || 0,
       scored:   c['scored'] || 0,
       enriched: c['enriched'] || 0,
       sequence: SEQ_STATUTS.reduce((s, st) => s + (c[st] || 0), 0),
+      failed:   FAILED_STATUTS.reduce((s, st) => s + (c[st] || 0), 0),
     })
   }, [])
 
   const loadRows = useCallback(async () => {
     setLoading(true)
+    setQueryError(null)
     setSelectedIds(new Set())
-    const statuts = tab === 'sequence' ? SEQ_STATUTS : [tab]
+    const statuts =
+      tab === 'sequence' ? SEQ_STATUTS :
+      tab === 'failed'   ? FAILED_STATUTS :
+      tab === 'a_scorer' ? ['A_SCORER'] :
+      [tab]
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('seller_qualification')
       .select(`
         seller_id, statut, score_total, recommandation, contexte_detecte,
-        ab_variant, enriched, enriched_source, enriched_at,
+        ab_variant, enriched, enriched_source,
         decision_maker_name, decision_maker_email, decision_maker_title, decision_maker_linkedin,
         error_reason, notes,
-        amazon_sellers(seller_name, seller_url, category, categories)
+        amazon_sellers(seller_name, seller_url, category)
       `)
       .in('statut', statuts)
-      .order('enriched_at', { ascending: false, nullsFirst: false })
+      .order('score_total', { ascending: false, nullsFirst: false })
       .limit(200)
 
+    if (error) setQueryError(error.message)
     setRows(data || [])
     setLoading(false)
   }, [tab])
@@ -433,9 +445,11 @@ export default function Pipeline() {
   }
 
   /* ── Column config per tab ── */
+  const isAScorer  = tab === 'a_scorer'
   const isScored   = tab === 'scored'
   const isEnriched = tab === 'enriched'
   const isSeq      = tab === 'sequence'
+  const isFailed   = tab === 'failed'
 
   return (
     <div className="space-y-6">
@@ -444,6 +458,17 @@ export default function Pipeline() {
         <h1 className="text-2xl font-bold text-text">Pipeline</h1>
         <p className="text-muted text-sm mt-0.5">Pilotez chaque étape avant de déclencher les workflows n8n</p>
       </div>
+
+      {/* Query error banner */}
+      {queryError && (
+        <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-700">Erreur de requête Supabase</p>
+            <p className="text-xs text-red-600 font-mono mt-0.5">{queryError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Webhook cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -462,7 +487,7 @@ export default function Pipeline() {
         {/* Tab bar */}
         <div className="flex border-b border-gray-100 bg-gray-50">
           {STAGE_TABS.map(({ key, label, color, dot }) => {
-            const cnt = key === 'sequence' ? counts.sequence : counts[key]
+            const cnt = counts[key] ?? 0
             return (
               <button
                 key={key}
@@ -516,7 +541,7 @@ export default function Pipeline() {
                   />
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Vendeur</th>
-                {(isScored) && <>
+                {(isAScorer || isScored || isFailed) && <>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Score</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Recommandation</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Contexte</th>
@@ -571,8 +596,8 @@ export default function Pipeline() {
                       )}
                     </td>
 
-                    {/* Scored columns */}
-                    {isScored && <>
+                    {/* Scored/AScorer/Failed columns */}
+                    {(isAScorer || isScored || isFailed) && <>
                       <td className="px-4 py-2.5"><ScoreBadge score={r.score_total} /></td>
                       <td className="px-4 py-2.5"><RecoBadge value={r.recommandation} /></td>
                       <td className="px-4 py-2.5">
@@ -630,26 +655,35 @@ export default function Pipeline() {
 
                     {/* Pipeline statut (always) */}
                     <td className="px-4 py-2.5">
-                      {!isSeq
-                        ? <StatutDropdown
+                      {isSeq
+                        ? <span className="text-xs text-muted">{r.ab_variant ? `Variant ${r.ab_variant}` : '—'}</span>
+                        : <StatutDropdown
                             sellerId={r.seller_id}
                             current={r.statut}
                             onChanged={(s) => { updateRow(r.seller_id, { statut: s }); fetchCounts() }}
                           />
-                        : <span className="text-xs text-muted">{r.ab_variant ? `Variant ${r.ab_variant}` : '—'}</span>
                       }
                     </td>
 
                     {/* Actions */}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
-                        {isScored && (
+                        {(isScored || isAScorer) && (
                           <button
                             onClick={() => setEnrichTarget(r)}
                             className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-medium hover:bg-purple-100 transition-colors whitespace-nowrap"
                           >
                             <UserCheck size={11} />
                             Manuel
+                          </button>
+                        )}
+                        {isFailed && (
+                          <button
+                            onClick={() => patchField(r.seller_id, 'statut', 'scored').then(() => setRows((p) => p.filter((x) => x.seller_id !== r.seller_id)))}
+                            className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors whitespace-nowrap"
+                          >
+                            <RefreshCw size={11} />
+                            Relancer
                           </button>
                         )}
                         {isEnriched && !r.decision_maker_email && (
@@ -680,12 +714,14 @@ export default function Pipeline() {
         {/* Footer */}
         <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
           <p className="text-xs text-muted">{rows.length} leads affichés</p>
+          {isAScorer && <p className="text-xs text-muted">Ces leads attendent d'être scorés par n8n · Changez le statut manuellement si besoin</p>}
           {isScored && (
             <p className="text-xs text-muted">
               Cliquez <strong>Manuel</strong> pour enrichir sans Apollo ·
               Changez le statut pour inclure/exclure de l'enrichissement
             </p>
           )}
+          {isFailed && <p className="text-xs text-muted">Cliquez <strong>Relancer</strong> pour remettre le lead en <em>scored</em> et retenter l'enrichissement</p>}
           {isEnriched && (
             <p className="text-xs text-muted">
               Les champs <strong>Nom / Email / Titre</strong> sont éditables en ligne ·
