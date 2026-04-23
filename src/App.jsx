@@ -17,18 +17,18 @@ import Errors     from './pages/Errors'
 import Campaign   from './pages/Campaign'
 import Debug      from './pages/Debug'
 
-// Campaign 2
-import C2Home          from './pages/c2/Home'
-import C2Pipeline      from './pages/c2/Pipeline'
-import C2Leads         from './pages/c2/Leads'
-import C2Templates     from './pages/c2/Templates'
-import CampagneEmail   from './pages/CampagneEmail'
+// Campaign 2 — BDR Outreach Cockpit (C2 silo only)
+import C2Dashboard     from './pages/c2/Dashboard'
+import C2Prospects     from './pages/c2/Prospects'
+import C2Marketplaces  from './pages/c2/Marketplaces'
+import C2Matching      from './pages/c2/Matching'
+import C2CampaignFollow from './pages/c2/CampaignFollow'
+import C2CampaignParams from './pages/c2/CampaignParams'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* All routes wrapped in Layout (sidebar) */}
         <Route path="/*" element={
           <Layout>
             <Routes>
@@ -48,13 +48,13 @@ export default function App() {
               <Route path="/campagne"    element={<Campaign />} />
               <Route path="/debug"       element={<Debug />} />
 
-              {/* Campaign 2 — silo séparé : composants C2 uniquement */}
-              <Route path="/c2"                element={<C2Home />} />
-              <Route path="/c2/pipeline"       element={<C2Pipeline />} />
-              <Route path="/c2/leads"          element={<C2Leads />} />
-              <Route path="/c2/templates"      element={<C2Templates />} />
-              <Route path="/c2/campagne"       element={<Campaign />} />
-              <Route path="/c2/campagne-email" element={<CampagneEmail />} />
+              {/* Campaign 2 — BDR Outreach Cockpit */}
+              <Route path="/c2"                element={<C2Dashboard />} />
+              <Route path="/c2/prospects"      element={<C2Prospects />} />
+              <Route path="/c2/marketplaces"   element={<C2Marketplaces />} />
+              <Route path="/c2/matching"       element={<C2Matching />} />
+              <Route path="/c2/campagne-email" element={<C2CampaignFollow />} />
+              <Route path="/c2/campagne"       element={<C2CampaignParams />} />
             </Routes>
           </Layout>
         } />

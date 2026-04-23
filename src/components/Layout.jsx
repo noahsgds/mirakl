@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, FileText, FlaskConical, AlertTriangle,
   Zap, BarChart2, Inbox, Settings, Bell, X, Flame, MessageSquare,
-  Bot, GitBranch, Globe, Target, Mail,
+  Bot, GitBranch, Globe, Target, Mail, Store, Crosshair, Activity,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -25,19 +25,14 @@ const C1_NAV = [
   { to: '/campagne',   label: 'Campagne',    icon: Settings },
 ]
 
-/*
- * C2 est un silo séparé : ses pages ne consomment QUE les tables C2
- * (sellers, marketplaces, seller_marketplace_matches, seller_emails_campagne_1,
- * seller_sequence_campagne_1, email_templates_campagne_1, workflow_config_campagne_1).
- * On ne réutilise JAMAIS les composants C1 (amazon_sellers, seller_emails, etc.).
- */
+/* ─── BDR Outreach Cockpit — C2 silo ─────────────────── */
 const C2_NAV = [
-  { to: '/c2',                 label: 'Dashboard',      icon: LayoutDashboard },
-  { to: '/c2/pipeline',        label: 'Pipeline',       icon: GitBranch },
-  { to: '/c2/leads',           label: 'Leads',          icon: Users },
-  { to: '/c2/templates',       label: 'Templates',      icon: FileText },
-  { to: '/c2/campagne',        label: 'Campagne',       icon: Settings },
-  { to: '/c2/campagne-email',  label: 'Campagne Email', icon: Mail },
+  { to: '/c2',               label: 'Global Dashboard',   icon: LayoutDashboard },
+  { to: '/c2/prospects',     label: 'Prospects',          icon: Users },
+  { to: '/c2/marketplaces',  label: 'Marketplaces',       icon: Store },
+  { to: '/c2/matching',      label: 'Matching & Reasoning', icon: Crosshair },
+  { to: '/c2/campagne-email',label: 'Campaign Following', icon: Activity },
+  { to: '/c2/campagne',      label: 'Campaign Parameters',icon: Settings },
 ]
 
 /* ─── Campaign tabs ──────────────────────────────────── */
