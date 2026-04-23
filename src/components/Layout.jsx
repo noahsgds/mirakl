@@ -26,20 +26,16 @@ const C1_NAV = [
 ]
 
 /*
- * C2_NAV is aligned with C1_NAV (same structure + labels) so the sales team
- * gets the same workflow surface. Extra entry "Campagne Email" is the
- * validation UI for seller × marketplace email sequences (VUE 1 + VUE 2).
+ * C2 est un silo séparé : ses pages ne consomment QUE les tables C2
+ * (sellers, marketplaces, seller_marketplace_matches, seller_emails_campagne_1,
+ * seller_sequence_campagne_1, email_templates_campagne_1, workflow_config_campagne_1).
+ * On ne réutilise JAMAIS les composants C1 (amazon_sellers, seller_emails, etc.).
  */
 const C2_NAV = [
   { to: '/c2',                 label: 'Dashboard',      icon: LayoutDashboard },
   { to: '/c2/pipeline',        label: 'Pipeline',       icon: GitBranch },
-  { to: '/c2/scraping',        label: 'Scraping',       icon: Bot },
   { to: '/c2/leads',           label: 'Leads',          icon: Users },
-  { to: '/c2/inbox',           label: 'Inbox',          icon: Inbox },
-  { to: '/c2/analytics',       label: 'Analytics',      icon: BarChart2 },
   { to: '/c2/templates',       label: 'Templates',      icon: FileText },
-  { to: '/c2/abtest',          label: 'A/B Test',       icon: FlaskConical },
-  { to: '/c2/erreurs',         label: 'Erreurs',        icon: AlertTriangle },
   { to: '/c2/campagne',        label: 'Campagne',       icon: Settings },
   { to: '/c2/campagne-email',  label: 'Campagne Email', icon: Mail },
 ]

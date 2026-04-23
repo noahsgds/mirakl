@@ -48,16 +48,11 @@ export default function App() {
               <Route path="/campagne"    element={<Campaign />} />
               <Route path="/debug"       element={<Debug />} />
 
-              {/* Campaign 2 */}
+              {/* Campaign 2 — silo séparé : composants C2 uniquement */}
               <Route path="/c2"                element={<C2Home />} />
               <Route path="/c2/pipeline"       element={<C2Pipeline />} />
-              <Route path="/c2/scraping"       element={<Scraping />} />
               <Route path="/c2/leads"          element={<C2Leads />} />
-              <Route path="/c2/inbox"          element={<Inbox />} />
-              <Route path="/c2/analytics"      element={<Analytics />} />
               <Route path="/c2/templates"      element={<C2Templates />} />
-              <Route path="/c2/abtest"         element={<ABTest />} />
-              <Route path="/c2/erreurs"        element={<Errors />} />
               <Route path="/c2/campagne"       element={<Campaign />} />
               <Route path="/c2/campagne-email" element={<CampagneEmail />} />
             </Routes>
