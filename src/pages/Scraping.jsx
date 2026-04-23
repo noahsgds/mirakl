@@ -206,7 +206,7 @@ export default function Scraping() {
     setSellersLoading(true)
     let query = supabase
       .from('amazon_sellers')
-      .select('seller_id, amazon_seller_id, seller_name, seller_url, category, country, nb_products, rating, nb_reviews, avg_price, positive_feedback_pct, seller_language, created_at, on_zalando, zalando_url, business_name, member_since')
+      .select('seller_id, amazon_seller_id, seller_name, seller_url, category, country, nb_products, rating, nb_reviews, avg_price, positive_feedback_pct, seller_language, created_at, on_zalando, zalando_url, business_name, member_since, scraped_email, scraped_phone, email_confidence, phone_confidence, decision_maker_name, decision_maker_email, decision_maker_phone, criteres_detail')
       .order('created_at', { ascending: false })
       .limit(500)
     if (category) query = query.eq('category', category)
@@ -1109,6 +1109,75 @@ function SellerDrawer({ seller, onClose }) {
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Sur Amazon depuis</p>
               <p className="text-sm text-gray-900">{seller.member_since}</p>
+            </div>
+          )}
+
+          {/* Legal / contact info scraped from /sp page */}
+          {(seller.scraped_email || seller.scraped_phone || seller.decision_maker_name || seller.decision_maker_email || seller.criteres_detail?.vat_number || seller.criteres_detail?.business_address) && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-2.5">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Infos légales & contact</p>
+              {seller.criteres_detail?.business_type && (
+                <div className="flex items-start justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Type</span>
+                  <span className="font-medium text-gray-900 text-right">{seller.criteres_detail.business_type}</span>
+                </div>
+              )}
+              {seller.criteres_detail?.vat_number && (
+                <div className="flex items-start justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">TVA</span>
+                  <span className="font-mono text-xs font-semibold text-gray-900">{seller.criteres_detail.vat_number}</span>
+                </div>
+              )}
+              {seller.criteres_detail?.trade_register_number && (
+                <div className="flex items-start justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Registre</span>
+                  <span className="font-mono text-xs text-gray-700">{seller.criteres_detail.trade_register_number}</span>
+                </div>
+              )}
+              {seller.scraped_email && (
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Email</span>
+                  <div className="flex items-center gap-1.5">
+                    <a href={`mailto:${seller.scraped_email}`} className="font-medium text-blue-700 hover:underline text-xs truncate max-w-[180px]">{seller.scraped_email}</a>
+                    {seller.email_confidence === 'high' && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">vérifié</span>}
+                    <button onClick={() => copy(seller.scraped_email)} className="text-gray-400 hover:text-gray-600"><Copy size={11} /></button>
+                  </div>
+                </div>
+              )}
+              {seller.scraped_phone && (
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Tél</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-gray-900 text-xs">{seller.scraped_phone}</span>
+                    {seller.phone_confidence === 'high' && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">vérifié</span>}
+                    <button onClick={() => copy(seller.scraped_phone)} className="text-gray-400 hover:text-gray-600"><Copy size={11} /></button>
+                  </div>
+                </div>
+              )}
+              {seller.decision_maker_name && (
+                <div className="flex items-start justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Contact</span>
+                  <span className="font-semibold text-gray-900 text-right">{seller.decision_maker_name}</span>
+                </div>
+              )}
+              {seller.decision_maker_email && (
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Email DM</span>
+                  <a href={`mailto:${seller.decision_maker_email}`} className="font-medium text-blue-700 hover:underline text-xs truncate max-w-[180px]">{seller.decision_maker_email}</a>
+                </div>
+              )}
+              {seller.decision_maker_phone && (
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-gray-500 flex-shrink-0">Tél DM</span>
+                  <span className="font-medium text-gray-900 text-xs">{seller.decision_maker_phone}</span>
+                </div>
+              )}
+              {seller.criteres_detail?.business_address && (
+                <div className="flex items-start gap-2 text-sm pt-1 border-t border-blue-100">
+                  <span className="text-gray-500 flex-shrink-0">Adresse</span>
+                  <span className="text-gray-700 text-xs leading-relaxed">{seller.criteres_detail.business_address}</span>
+                </div>
+              )}
             </div>
           )}
 
