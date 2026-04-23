@@ -4,6 +4,7 @@
 #
 # Le scraper tourne headless (invisible) pour économiser le CPU.
 # Pour voir Chrome : export SCRAPER_HEADLESS=0 avant de lancer.
+# `caffeinate` empêche le Mac de dormir pendant le scrape (veille = jobs coincés).
 
 set -e
 cd "$(dirname "$0")"
@@ -20,6 +21,7 @@ export POLL_SECONDS="${POLL_SECONDS:-15}"
 
 echo "→ Runner local démarré. Ctrl-C pour arrêter."
 echo "  Headless=$SCRAPER_HEADLESS  Poll=${POLL_SECONDS}s"
+echo "  Mac maintenu éveillé via caffeinate tant que ce process tourne."
 echo ""
 
-exec .venv/bin/python -u runner.py
+exec caffeinate -dimsu .venv/bin/python -u runner.py
