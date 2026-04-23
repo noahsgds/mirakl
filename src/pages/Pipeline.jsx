@@ -355,11 +355,27 @@ export default function Pipeline() {
     setSelectedIds(new Set())
     const { data, error } = await supabase
       .from('seller_qualification')
-      .select('seller_id, statut, score_total, recommandation, contexte_detecte, ab_variant, enriched, enriched_source, decision_maker_name, decision_maker_email, decision_maker_title, decision_maker_linkedin, error_reason, notes')
+      .select('seller_id, statut, score_total, recommandation, contexte_detecte, ab_variant, enriched, enriched_source, decision_maker_name, decision_maker_email, decision_maker_title, decision_maker_linkedin, error_reason')
       .in('statut', statutsForTab(tab))
       .limit(200)
-    if (error) setQueryError(error.message)
-    setRows(data || [])
+    if (error) { setQueryError(error.message); setRows([]); setLoading(false); return }
+
+    let merged = data || []
+
+    // For sequence tab, fetch seller_sequence to get the current step
+    if (tab === 'sequence' && merged.length > 0) {
+      const ids = merged.map((r) => r.seller_id)
+      const { data: seqData } = await supabase
+        .from('seller_sequence')
+        .select('seller_id, sequence_step, mail_step, statut_sequence, replied, bounced, unsubscribed')
+        .in('seller_id', ids)
+      if (seqData) {
+        const seqMap = Object.fromEntries(seqData.map((s) => [s.seller_id, s]))
+        merged = merged.map((r) => ({ ...r, seq: seqMap[r.seller_id] || null }))
+      }
+    }
+
+    setRows(merged)
     setLoading(false)
   }, [tab])
 
@@ -507,6 +523,7 @@ export default function Pipeline() {
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Contexte</th>
                 </>}
                 {showEnrich && <>
+                  {isSeq && <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Étape</th>}
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Nom</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Email</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Titre</th>
@@ -552,6 +569,19 @@ export default function Pipeline() {
 
                   {/* Enrich cols */}
                   {showEnrich && <>
+                    {isSeq && (
+                      <td className="px-4 py-2.5">
+                        {r.seq ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#1B3A5C]">
+                              Mail {r.seq.sequence_step ?? r.seq.mail_step ?? '?'}/3
+                            </span>
+                            {r.seq.replied && <span className="text-[10px] text-green-600 font-medium">Répondu</span>}
+                            {r.seq.bounced && <span className="text-[10px] text-red-500 font-medium">Bounce</span>}
+                          </div>
+                        ) : <span className="text-gray-400 text-xs">—</span>}
+                      </td>
+                    )}
                     <td className="px-4 py-2.5 min-w-[130px]">
                       <InlineCell value={r.decision_maker_name} placeholder="Ajouter nom" Ic={User}
                         onSave={(v) => patchDB(r.seller_id, 'decision_maker_name', v)} />
