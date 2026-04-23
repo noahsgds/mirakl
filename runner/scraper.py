@@ -896,10 +896,26 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True,
 
     try:
         # ── Warmup ──────────────────────────────────────────────────────────
+        # Retry le warmup jusqu'à 3× car parfois Chrome démarre avec une fenêtre
+        # zombie (NoSuchWindowException) — il suffit de recréer le driver.
         print("Warmup Amazon FR…")
-        driver.get("https://www.amazon.fr")
-        time.sleep(random.uniform(5, 8))
-        print("  ✓ OK\n")
+        for attempt in range(3):
+            try:
+                driver.get("https://www.amazon.fr")
+                time.sleep(random.uniform(5, 8))
+                print("  ✓ OK\n")
+                break
+            except (NoSuchWindowException, WebDriverException) as e:
+                print(f"  ⚠ Warmup attempt {attempt + 1}/3 failed: {type(e).__name__}. Restart…")
+                try:
+                    driver.quit()
+                except Exception:
+                    pass
+                time.sleep(2)
+                driver = make_driver()
+        else:
+            print("  ✗ Warmup échec après 3 tentatives — abort.")
+            return []
 
         # ── Phase A — ASINs ─────────────────────────────────────────────────
         print("Phase A — Collecte ASINs\n")
@@ -950,7 +966,9 @@ def run(target: int = 20, parallel: int = 1, skip_existing: bool = True,
 
         # ── Phase B — Sellers tiers (parallèle si parallel > 1) ──────────────
         print(f"Phase B — Extraction vendeurs tiers (parallel={parallel})\n")
-        cand_goal = max(target * 3, 100)
+        # Pour target petit (≤10), 20 candidats suffisent largement à Phase C
+        # (qui filtre par langue/rating/marketplace). Pour target gros, target*3.
+        cand_goal = max(target * 3, 20) if target <= 10 else max(target * 3, 100)
 
         if parallel > 1:
             # On libère le driver principal (chaque worker a le sien)
