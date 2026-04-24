@@ -376,7 +376,7 @@ export default function CampaignEmail() {
                   : x
               )
             )
-            showToast('success', '🚀 Sequence launched! Emails will be sent via n8n.', 4500)
+            showToast('success', 'Sequence launched. Emails will be sent via n8n.', 4500)
           }}
           showToast={showToast}
         />

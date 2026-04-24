@@ -69,7 +69,7 @@ export default function Analytics() {
     .map((c) => {
       const v = catMap[c.key] || { total: 0, hot: 0, replied: 0, present: 0 }
       return {
-        cat: `${c.emoji} ${c.label}`,
+        cat: c.label,
         key: c.key,
         total: v.total,
         present: v.present,

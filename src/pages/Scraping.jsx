@@ -72,7 +72,6 @@ function CategoryBadge({ categoryKey, size = 'sm' }) {
     <span
       className={`inline-flex items-center gap-1 ${px} rounded-full font-semibold bg-gray-100 text-gray-700 ${txt}`}
     >
-      <span>{cat.emoji}</span>
       <span>{cat.label}</span>
     </span>
   )
@@ -107,23 +106,20 @@ function Rating({ value }) {
 }
 
 const LANG_META = {
-  en: { flag: '🇬🇧', label: 'EN' },
-  fr: { flag: '🇫🇷', label: 'FR' },
-  de: { flag: '🇩🇪', label: 'DE' },
-  it: { flag: '🇮🇹', label: 'IT' },
-  es: { flag: '🇪🇸', label: 'ES' },
-  nl: { flag: '🇳🇱', label: 'NL' },
-  pl: { flag: '🇵🇱', label: 'PL' },
+  en: { label: 'EN' },
+  fr: { label: 'FR' },
+  de: { label: 'DE' },
+  it: { label: 'IT' },
+  es: { label: 'ES' },
+  nl: { label: 'NL' },
+  pl: { label: 'PL' },
 }
 
 function LangFlag({ lang }) {
   if (!lang) return <span className="text-gray-300">—</span>
-  const m = LANG_META[lang.toLowerCase()] || { flag: '🌍', label: lang.toUpperCase() }
+  const m = LANG_META[lang.toLowerCase()] || { label: lang.toUpperCase() }
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-gray-700">
-      <span>{m.flag}</span>
-      <span>{m.label}</span>
-    </span>
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700">{m.label}</span>
   )
 }
 
@@ -337,7 +333,7 @@ export default function Scraping() {
       const statusLabel = active.status === 'running' ? 'en cours' : 'en attente'
       setToast({
         type: 'error',
-        msg: `Un scraping ${cat.label} ${cat.emoji} is already ${statusLabel} (created ${fmtDate(active.created_at)}). Wait until it finishes.`,
+        msg: `Un scraping ${cat.label} is already ${statusLabel} (created ${fmtDate(active.created_at)}). Wait until it finishes.`,
       })
       setTimeout(() => setToast(null), 5000)
       return
@@ -387,7 +383,7 @@ export default function Scraping() {
       const cat = getCategory(pendingConfirm.category)
       setToast({
         type: 'ok',
-        msg: `Job created: ${pendingConfirm.target_count} sellers ${cat.label} ${cat.emoji} — the runner will launch it.`,
+        msg: `Job created: ${pendingConfirm.target_count} sellers ${cat.label} — the runner will launch it.`,
       })
       loadAll()
     }
@@ -510,7 +506,9 @@ export default function Scraping() {
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <span className="text-2xl">{c.emoji}</span>
+                  <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                    {c.label}
+                  </span>
                   {isBusy && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">
                       <Loader2 size={10} className="animate-spin" />
@@ -568,7 +566,7 @@ export default function Scraping() {
         <div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-gray-900">
-              {activeCategory ? `Sellers ${getCategory(activeCategory).emoji} ${getCategory(activeCategory).label}` : 'Tous les sellers'}
+              {activeCategory ? `Sellers ${getCategory(activeCategory).label}` : 'Tous les sellers'}
             </h2>
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
               {filteredSellers.length}
@@ -631,7 +629,7 @@ export default function Scraping() {
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {['en', 'fr', 'de', 'it', 'es', 'nl', 'pl'].map((code) => {
-                  const meta = LANG_META[code] || { flag: '🌍', label: code.toUpperCase() }
+                  const meta = LANG_META[code] || { label: code.toUpperCase() }
                   const active = filters.languages.includes(code)
                   const count = langCounts.find((l) => l.code === code)?.count || 0
                   return (
@@ -644,7 +642,6 @@ export default function Scraping() {
                           : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
                       } ${count === 0 ? 'opacity-40' : ''}`}
                     >
-                      <span>{meta.flag}</span>
                       {meta.label}
                       <span className={active ? 'text-white/70' : 'text-gray-400'}>({count})</span>
                     </button>
@@ -796,7 +793,7 @@ export default function Scraping() {
       {/* Launch panel */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-1">
-          Lancer un scraping — {selectedCat.emoji} {selectedCat.label}
+          Lancer un scraping — {selectedCat.label}
         </h2>
         <p className="text-sm text-gray-500 mb-1">
           Target sellers for: <strong>{selectedCat.marketplaces.join(', ')}</strong>
@@ -812,7 +809,7 @@ export default function Scraping() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
             >
               {CATEGORIES.map((c) => (
-                <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>
+                <option key={c.key} value={c.key}>{c.label}</option>
               ))}
             </select>
           </div>
@@ -880,7 +877,7 @@ export default function Scraping() {
             <div className="space-y-3">
               {langCounts.map((l) => {
                 const pct = sellerStats.total ? Math.round((l.count / sellerStats.total) * 100) : 0
-                const meta = LANG_META[l.code] || { flag: l.code === 'unknown' ? '❓' : '🌍', label: l.code.toUpperCase() }
+                const meta = LANG_META[l.code] || { label: l.code.toUpperCase() }
                 return (
                   <button
                     key={l.code}
@@ -888,10 +885,7 @@ export default function Scraping() {
                     className={`w-full text-left block group ${l.code === 'unknown' ? 'cursor-default' : 'hover:bg-gray-50 rounded-lg'} p-1 -m-1`}
                   >
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="inline-flex items-center gap-1.5 text-gray-700">
-                        <span>{meta.flag}</span>
-                        <span>{meta.label === 'UNKNOWN' ? 'Inconnue' : meta.label}</span>
-                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-gray-700">{meta.label === 'UNKNOWN' ? 'Inconnue' : meta.label}</span>
                       <span className="text-gray-500 text-xs">{l.count} · {pct}%</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -995,7 +989,7 @@ export default function Scraping() {
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
-              <Row k="Category" v={<>{getCategory(pendingConfirm.category).emoji} {getCategory(pendingConfirm.category).label}</>} />
+              <Row k="Category" v={getCategory(pendingConfirm.category).label} />
               <Row k="Nb sellers cible" v={pendingConfirm.target_count} />
               <Row k="Workers parallels" v={pendingConfirm.parallel} />
               <Row k="Skip doublons" v={pendingConfirm.skip_existing ? 'Oui' : 'Non'} />

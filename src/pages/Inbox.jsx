@@ -216,8 +216,12 @@ export default function Inbox() {
         <div className="flex items-center justify-center h-48 text-muted">Loading...</div>
       ) : leads.length === 0 ? (
         <div className="card py-16 text-center">
-          <div className="text-4xl mb-3">
-            {tab === 'HOT' ? '🔥' : '💬'}
+          <div className="mb-3 flex justify-center">
+            {tab === 'HOT' ? (
+              <Flame size={34} className="text-[#E8445A]" />
+            ) : (
+              <MessageSquare size={34} className="text-[#2E7D52]" />
+            )}
           </div>
           <p className="text-muted">No lead {tab === 'HOT' ? 'HOT' : 'REPLIED'} pour le moment</p>
         </div>

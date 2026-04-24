@@ -74,11 +74,23 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text">Dashboard</h1>
-        <p className="text-muted text-sm mt-1">
-          Amazon FR &rarr; 8 categories &times; {CATEGORIES.reduce((n, c) => n + c.marketplaces.length, 0)} partner marketplaces
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+            <img src="/images/logo-mirakl.png" alt="Mirakl" className="h-6 w-6 object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-text">Dashboard</h1>
+            <p className="text-muted text-sm mt-1">
+              Amazon FR &rarr; 8 categories &times; {CATEGORIES.reduce((n, c) => n + c.marketplaces.length, 0)} partner marketplaces
+            </p>
+          </div>
+        </div>
+        <img
+          src="/images/mirakl-nexus-orb.png"
+          alt="Mirakl Nexus Orb"
+          className="hidden h-14 w-14 flex-shrink-0 object-contain opacity-95 sm:block motion-safe:animate-[spin_16s_linear_infinite] motion-reduce:animate-none"
+        />
       </div>
 
       {/* KPI Cards */}
@@ -147,7 +159,6 @@ export default function Home() {
             const n = categoryCounts[c.key] || 0
             return (
               <div key={c.key} className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-2xl mb-1">{c.emoji}</div>
                 <p className="text-xs font-medium text-text">{c.label}</p>
                 <p className="text-lg font-bold text-[#1B3A5C] mt-1">{n}</p>
               </div>

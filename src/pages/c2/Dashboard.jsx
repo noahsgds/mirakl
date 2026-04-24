@@ -153,19 +153,36 @@ function createMiraklEmailVariants(match, seller, tone = 'professional') {
     toneLines.cta,
     '',
     'Best regards,',
-    '[Your Name]',
     'Mirakl',
   ]
 
-  const shortLines = [
+  const ultraPersonalizedLines = [
     `Hi ${firstName},`,
     '',
-    `${match.seller_name} is a ${score}/100 fit for ${match.marketplace_name}.`,
-    `This can help accelerate your multichannel growth in ${categories}.`,
-    ...(products[0] ? [`First product priority: ${products[0]}.`] : []),
-    seasonal.ctaLine,
+    `I reviewed ${match.seller_name} and identified a strong marketplace opportunity on ${match.marketplace_name}.`,
     '',
-    '[Your Name]',
+    'The opportunity:',
+    `- Compatibility score: ${score}/100`,
+    `- Category fit: ${categories}`,
+    ...(dataProof ? [`- Brand signal: ${dataProof}`] : []),
+    ...(marketProof ? [`- Marketplace signal: ${marketProof}`] : []),
+    '',
+    'Why Mirakl Connect:',
+    '- Access 450+ Mirakl-powered marketplaces globally',
+    '- Launch in days with AI-powered catalog adaptation and validation',
+    '- Prioritize channels that best match category and margin goals',
+    '',
+    ...(products.length
+      ? [
+          'Products to prioritize:',
+          ...products.map((p) => `- ${p}`),
+          '',
+        ]
+      : []),
+    `Personalized fit note for ${match.seller_name}: ${rationale}`,
+    toneLines.cta,
+    '',
+    'Best regards,',
     'Mirakl',
   ]
 
@@ -175,21 +192,21 @@ function createMiraklEmailVariants(match, seller, tone = 'professional') {
       body: detailedLines.join('\n'),
     },
     short: {
-      subject: `${match.seller_name}: opportunity on ${match.marketplace_name}`,
-      body: shortLines.join('\n'),
+      subject: `${match.seller_name} × ${match.marketplace_name}: personalized growth plan`,
+      body: ultraPersonalizedLines.join('\n'),
     },
   }
 }
 
 function KpiCard({ icon: Icon, label, value, delta, color, onClick }) {
   const palette = {
-    blue:    ['bg-blue-50',   'text-blue-600'],
-    emerald: ['bg-emerald-50','text-emerald-600'],
-    amber:   ['bg-amber-50',  'text-amber-600'],
-    red:     ['bg-red-50',    'text-red-600'],
-    purple:  ['bg-purple-50', 'text-purple-600'],
-    gray:    ['bg-gray-100',  'text-gray-600'],
-  }[color] ?? ['bg-gray-100', 'text-gray-600']
+    blue:    'text-[#1f4f9a]',
+    emerald: 'text-[#1f7a4f]',
+    amber:   'text-[#8a5a1e]',
+    red:     'text-[#b33f4f]',
+    purple:  'text-[#5b53a6]',
+    gray:    'text-[#475569]',
+  }[color] ?? 'text-[#475569]'
 
   return (
     <motion.div
@@ -198,8 +215,8 @@ function KpiCard({ icon: Icon, label, value, delta, color, onClick }) {
       className={`card cursor-pointer select-none ${onClick ? 'hover:ring-2 hover:ring-[#2563EB]/30' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${palette[0]}`}>
-          <Icon size={20} className={palette[1]} />
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200/80 bg-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+          <Icon size={19} className={palette} strokeWidth={1.8} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-2xl font-bold text-text leading-tight">{value}</div>
@@ -267,7 +284,7 @@ function EmailGenerationCard({ match, seller }) {
       <div className="grid grid-cols-1 gap-3">
         {[
           { key: 'detailed', label: 'Detailed Personalized Email', subject: variants?.detailed?.subject, body: variants?.detailed?.body },
-          { key: 'short',    label: 'Short High-Conviction Email',  subject: variants?.short?.subject,    body: variants?.short?.body },
+          { key: 'short',    label: 'Ultra Personalized Email',  subject: variants?.short?.subject,    body: variants?.short?.body },
         ].map(({ key, label, subject, body }) => (
           <div key={key} className="rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -450,14 +467,26 @@ export default function C2Dashboard() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Global Dashboard</h1>
-          <p className="text-sm text-muted mt-0.5">Lead queue · Email generation · Campaign health</p>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+            <img src="/images/logo-mirakl.png" alt="Mirakl" className="h-6 w-6 object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-text">Global Dashboard</h1>
+            <p className="text-sm text-muted mt-0.5">Lead queue · Email generation · Campaign health</p>
+          </div>
         </div>
-        <button onClick={load} disabled={loading} className="btn-secondary flex items-center gap-2">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <img
+            src="/images/mirakl-nexus-orb.png"
+            alt="Mirakl Nexus Orb"
+            className="hidden h-11 w-11 flex-shrink-0 object-contain opacity-95 sm:block motion-safe:animate-[spin_16s_linear_infinite] motion-reduce:animate-none"
+          />
+          <button onClick={load} disabled={loading} className="btn-secondary flex items-center gap-2">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}

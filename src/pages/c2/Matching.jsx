@@ -76,8 +76,8 @@ function MatchDefenseMode({ winner, challenger, seller }) {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center">
-          <Swords size={18} className="text-white" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+          <Swords size={17} className="text-slate-700" />
         </div>
         <div>
           <h3 className="font-bold text-text">Match Defense Mode</h3>

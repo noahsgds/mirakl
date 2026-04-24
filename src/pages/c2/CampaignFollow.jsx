@@ -8,8 +8,18 @@ import {
   Wand2,
   CheckCircle2,
   AlertCircle,
+  Sparkles,
+  Copy,
 } from 'lucide-react'
-import { fetchMatches, fetchSellers, fetchMarketplaces, fitBandColor, sendReadiness, resolveLeadContact } from '../../lib/c2'
+import {
+  fetchMatches,
+  fetchSellers,
+  fetchMarketplaces,
+  fitBandColor,
+  sendReadiness,
+  resolveLeadContact,
+  runApolloContactDemoBatch,
+} from '../../lib/c2'
 
 const PAGE_SIZE = 10
 
@@ -147,19 +157,36 @@ function createEmailVariants(match, tone = 'professional') {
     toneLines.cta,
     '',
     'Best regards,',
-    '[Your Name]',
     'Mirakl',
   ]
 
-  const shortLines = [
+  const ultraPersonalizedLines = [
     `Hi ${firstName},`,
     '',
-    `${match.seller_name} is a ${score}/100 fit for ${match.marketplace_name}.`,
-    `This can help accelerate your multichannel growth in ${categories}.`,
-    ...(products[0] ? [`First product priority: ${products[0]}.`] : []),
-    seasonal.ctaLine,
+    `I reviewed ${match.seller_name} and identified a strong marketplace opportunity on ${match.marketplace_name}.`,
     '',
-    '[Your Name]',
+    'The opportunity:',
+    `- Compatibility score: ${score}/100`,
+    `- Category fit: ${categories}`,
+    ...(dataProof ? [`- Brand signal: ${dataProof}`] : []),
+    ...(marketProof ? [`- Marketplace signal: ${marketProof}`] : []),
+    '',
+    'Why Mirakl Connect:',
+    '- Access 450+ Mirakl-powered marketplaces globally',
+    '- Launch in days with AI-powered catalog adaptation and validation',
+    '- Prioritize channels that best match category and margin goals',
+    '',
+    ...(products.length
+      ? [
+          'Products to prioritize:',
+          ...products.map((p) => `- ${p}`),
+          '',
+        ]
+      : []),
+    `Personalized fit note for ${match.seller_name}: ${rationale}`,
+    toneLines.cta,
+    '',
+    'Best regards,',
     'Mirakl',
   ]
 
@@ -169,8 +196,8 @@ function createEmailVariants(match, tone = 'professional') {
       body: detailedLines.join('\n'),
     },
     short: {
-      subject: `${match.seller_name}: opportunity on ${match.marketplace_name}`,
-      body: shortLines.join('\n'),
+      subject: `${match.seller_name} × ${match.marketplace_name}: personalized growth plan`,
+      body: ultraPersonalizedLines.join('\n'),
     },
   }
 }
@@ -185,6 +212,7 @@ function EmailEditorCard({
   onSend,
   canSend,
   sent,
+  regenerating,
 }) {
   return (
     <div className="card space-y-3">
@@ -219,9 +247,10 @@ function EmailEditorCard({
       <div className="flex items-center gap-2">
         <button
           onClick={() => onRegenerate(variantKey)}
-          className="btn-secondary inline-flex items-center gap-1.5 text-xs"
+          disabled={regenerating}
+          className="btn-secondary inline-flex items-center gap-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Wand2 size={12} /> Regenerate
+          <Wand2 size={12} className={regenerating ? 'animate-spin' : ''} /> {regenerating ? 'Regenerating…' : 'Regenerate'}
         </button>
         <button
           onClick={() => onSend(variantKey)}
@@ -235,12 +264,195 @@ function EmailEditorCard({
   )
 }
 
+function contactConfidence(match) {
+  if (match?.decision_maker_email && match?.decision_maker_name) return 'High'
+  if (match?.decision_maker_email) return 'Medium'
+  return 'Low'
+}
+
+function buildCommercialArguments(match) {
+  const score = Math.round(Number(match?.compatibility_score ?? 0))
+  const products = splitValues(match?.['Top 3 products to push for each marketplace']).slice(0, 3)
+  const category = match?.categories || match?.product_types_list || 'relevant category'
+  const argumentsList = [
+    `${match?.marketplace_name} is a high-fit channel for ${match?.seller_name} (${score}/100 compatibility).`,
+    `Your assortment and positioning align with demand in ${category}.`,
+  ]
+  if (products.length) {
+    argumentsList.push(`Priority SKUs to launch first: ${products.join(', ')}.`)
+  }
+  if (match?.marketplace_monthly_traffic) {
+    argumentsList.push(`Marketplace demand signal: ${match.marketplace_monthly_traffic} monthly traffic.`)
+  }
+  return argumentsList
+}
+
+function buildSalesBrief(target) {
+  const score = Math.round(Number(target?.compatibility_score ?? 0))
+  const products = splitValues(target?.['Top 3 products to push for each marketplace']).slice(0, 3)
+  const category = target?.categories || target?.product_types_list || target?.marketplace_main_categories || 'relevant category'
+  const confidence = contactConfidence(target)
+  const traffic = target?.marketplace_monthly_traffic || null
+  const commission =
+    target?.marketplace_commission_rate != null
+      ? `${Math.round(Number(target.marketplace_commission_rate) * 100)}%`
+      : null
+  const rationale = target?.rationale || `Strong assortment and positioning alignment for ${target?.marketplace_name}.`
+  const readiness = sendReadiness(target)
+
+  const executiveSummary = `${target?.seller_name} has a high-probability growth opportunity on ${target?.marketplace_name} with a compatibility score of ${score}/100. The strongest commercial angle is category-fit plus speed-to-market via Mirakl Connect.`
+
+  const whyThisMarketplace = [
+    `${target?.marketplace_name} is the best-fit channel for ${target?.seller_name} based on catalog compatibility.`,
+    `Category alignment: ${category}.`,
+    rationale,
+    ...(traffic ? [`Demand signal: ${traffic} monthly traffic.`] : []),
+    ...(commission ? [`Commercial context: commission baseline around ${commission}.`] : []),
+  ]
+
+  const contactPlan = {
+    primaryName: target?.decision_maker_name || 'No named decision maker yet',
+    primaryEmail: target?.decision_maker_email || 'No direct email yet',
+    confidence,
+    nextAction:
+      confidence === 'High'
+        ? 'Send personalized email now and follow up in 48h.'
+        : confidence === 'Medium'
+          ? 'Send with current email, then enrich title/ownership before follow-up.'
+          : 'Run Apollo Contact Finder, validate owner, then launch sequence.',
+  }
+
+  const riskMitigation = [
+    readiness === 'missing_contact'
+      ? 'Risk: No verified decision maker. Mitigation: run contact enrichment before sequence launch.'
+      : 'Risk: Inbox competition. Mitigation: personalize first line with seller + category-fit proof.',
+    score < 80
+      ? 'Risk: Fit score below top tier. Mitigation: lead with strongest product-level angle and data proof.'
+      : 'Risk: Prioritization delay from seller side. Mitigation: propose a short 20-minute call with concrete launch plan.',
+  ]
+
+  const first7Days = [
+    `Day 1: Send personalized outreach for ${target?.seller_name} → ${target?.marketplace_name}.`,
+    'Day 3: Follow up with product-level angle and expected upside.',
+    'Day 5: Share 2-3 priority SKUs and launch timeline.',
+    'Day 7: Push meeting CTA and close/continue decision.',
+  ]
+
+  return {
+    executiveSummary,
+    whyThisMarketplace,
+    contactPlan,
+    riskMitigation,
+    first7Days,
+    products,
+  }
+}
+
+function SellerOpportunityBrief({ match, bestForSeller, onCopyBrief, copyDone }) {
+  const target = bestForSeller || match
+  const brief = useMemo(() => buildSalesBrief(target), [target])
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    setExpanded(false)
+  }, [target?.seller_id, target?.marketplace_id])
+
+  if (!target) return null
+
+  return (
+    <div className="card border border-[#2563EB]/20 bg-gradient-to-r from-blue-50/80 to-indigo-50/60">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#2563EB]">
+            <Sparkles size={11} />
+            Campaign 1 Fit Brief
+          </p>
+          <h3 className="mt-2 text-base font-bold text-text">Best-fit marketplace recommendation</h3>
+          <p className="mt-0.5 text-xs text-muted">
+            Seller: <span className="font-semibold text-text">{target.seller_name}</span> · Recommended marketplace:{' '}
+            <span className="font-semibold text-text">{target.marketplace_name}</span>
+          </p>
+        </div>
+        <button
+          onClick={onCopyBrief}
+          className="inline-flex items-center gap-1 rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+        >
+          {copyDone ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+          {copyDone ? 'Copied' : 'Copy brief'}
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-4">
+        <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Overview · Fit score</p>
+          <p className="mt-1 text-xl font-bold text-[#2563EB]">{Number(target.compatibility_score ?? 0).toFixed(1)}</p>
+          <p className="text-xs text-muted">Best opportunity for personalized outreach.</p>
+        </div>
+        <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Overview · Primary contact</p>
+          <p className="mt-1 text-sm font-semibold text-text">{brief.contactPlan.primaryName}</p>
+          <p className="text-xs text-muted">{brief.contactPlan.primaryEmail}</p>
+          <p className="mt-1 text-[11px] font-medium text-[#1B3A5C]">Confidence: {brief.contactPlan.confidence}</p>
+        </div>
+        <div className="rounded-lg border border-white/80 bg-white/80 p-3 lg:col-span-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Overview · Executive summary</p>
+          <p className="mt-1 text-xs leading-relaxed text-text">{brief.executiveSummary}</p>
+          <p className="mt-2 text-[11px] font-medium text-[#1B3A5C]">Immediate action: {brief.contactPlan.nextAction}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex justify-end">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-lg border border-[#2563EB]/30 bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#1B3A5C] hover:bg-white"
+        >
+          {expanded ? 'Hide full brief' : 'See full brief'}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Why this marketplace now</p>
+            <ul className="mt-1.5 space-y-1.5">
+              {brief.whyThisMarketplace.map((line) => (
+                <li key={line} className="text-xs leading-relaxed text-text">• {line}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Risk and mitigation</p>
+            <ul className="mt-1.5 space-y-1.5">
+              {brief.riskMitigation.map((line) => (
+                <li key={line} className="text-xs leading-relaxed text-text">• {line}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">7-day activation plan</p>
+            <ul className="mt-1.5 space-y-1.5">
+              {brief.first7Days.map((line) => (
+                <li key={line} className="text-xs leading-relaxed text-text">• {line}</li>
+              ))}
+            </ul>
+            {brief.products.length > 0 && (
+              <div className="mt-2 border-t border-gray-100 pt-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Priority SKUs</p>
+                <p className="mt-1 text-xs text-text">{brief.products.join(', ')}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function C2CampaignFollow() {
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [apolloRunning, setApolloRunning] = useState(false)
-  const [sellerById, setSellerById] = useState({})
   const [search, setSearch] = useState('')
   const [minScore, setMinScore] = useState('')
   const [maxScore, setMaxScore] = useState('')
@@ -253,6 +465,8 @@ export default function C2CampaignFollow() {
   const [tone, setTone] = useState('professional')
   const [drafts, setDrafts] = useState({ detailed: { subject: '', body: '' }, short: { subject: '', body: '' } })
   const [sentFlags, setSentFlags] = useState({ detailed: false, short: false })
+  const [regenLoading, setRegenLoading] = useState({ detailed: false, short: false })
+  const [briefCopied, setBriefCopied] = useState(false)
 
   const [toast, setToast] = useState(null)
 
@@ -271,7 +485,6 @@ export default function C2CampaignFollow() {
     ])
     const sellersById = Object.fromEntries((sellers ?? []).map((s) => [s.seller_id, s]))
     const marketplacesById = Object.fromEntries((marketplaces ?? []).map((m) => [m.marketplace_id, m]))
-    setSellerById(sellersById)
     const cleaned = (data ?? [])
       .map((m) => {
         const seller = sellersById[m.seller_id]
@@ -329,11 +542,38 @@ export default function C2CampaignFollow() {
   }, [filtered, page])
 
   useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedMatch(null)
+      return
+    }
+    if (!selectedMatch) {
+      setSelectedMatch(filtered[0])
+      return
+    }
+    const stillVisible = filtered.some(
+      (m) =>
+        m.seller_id === selectedMatch.seller_id &&
+        m.marketplace_id === selectedMatch.marketplace_id,
+    )
+    if (!stillVisible) {
+      setSelectedMatch(filtered[0])
+    }
+  }, [filtered, selectedMatch])
+
+  useEffect(() => {
     if (!selectedMatch) return
     const fresh = createEmailVariants(selectedMatch, tone)
     setDrafts(fresh)
     setSentFlags({ detailed: false, short: false })
+    setBriefCopied(false)
   }, [selectedMatch, tone])
+
+  const bestMatchForSelectedSeller = useMemo(() => {
+    if (!selectedMatch) return null
+    const sameSeller = matches.filter((m) => m.seller_id === selectedMatch.seller_id)
+    if (!sameSeller.length) return selectedMatch
+    return [...sameSeller].sort((a, b) => (b.compatibility_score ?? 0) - (a.compatibility_score ?? 0))[0]
+  }, [matches, selectedMatch])
 
   function updateDraft(kind, field, value) {
     setDrafts((prev) => ({
@@ -342,11 +582,48 @@ export default function C2CampaignFollow() {
     }))
   }
 
-  function regenerate(kind) {
+  async function regenerate(kind) {
     if (!selectedMatch) return
-    const fresh = createEmailVariants(selectedMatch, tone)
-    setDrafts((prev) => ({ ...prev, [kind]: fresh[kind] }))
-    notify('info', `${kind === 'detailed' ? 'Detailed' : 'Short'} email regenerated.`)
+    setRegenLoading((prev) => ({ ...prev, [kind]: true }))
+    try {
+      const response = await fetch('/api/c2/regenerate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead: selectedMatch,
+          tone,
+          variant: kind,
+        }),
+      })
+      const raw = await response.text()
+      let payload = null
+      try {
+        payload = raw ? JSON.parse(raw) : null
+      } catch (_) {
+        payload = null
+      }
+      if (!response.ok || !payload?.subject || !payload?.body) {
+        const serverMsg =
+          payload?.error ||
+          payload?.debug ||
+          (raw && raw.trim() ? raw.slice(0, 160) : '')
+        throw new Error(serverMsg || 'Regeneration failed')
+      }
+      setDrafts((prev) => ({
+        ...prev,
+        [kind]: {
+          subject: payload.subject,
+          body: payload.body,
+        },
+      }))
+      notify('info', `${kind === 'detailed' ? 'Detailed' : 'Ultra personalized'} email regenerated.`)
+    } catch (error) {
+      const fresh = createEmailVariants(selectedMatch, tone)
+      setDrafts((prev) => ({ ...prev, [kind]: fresh[kind] }))
+      notify('error', `OpenAI regenerate failed (${error?.message || 'unknown'}). Fallback text applied.`)
+    } finally {
+      setRegenLoading((prev) => ({ ...prev, [kind]: false }))
+    }
   }
 
   function sendEmail(kind) {
@@ -358,7 +635,41 @@ export default function C2CampaignFollow() {
     const mailto = `mailto:${selectedMatch.decision_maker_email}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`
     window.location.href = mailto
     setSentFlags((prev) => ({ ...prev, [kind]: true }))
-    notify('success', `${kind === 'detailed' ? 'Detailed' : 'Short'} email ready to send.`)
+    notify('success', `${kind === 'detailed' ? 'Detailed' : 'Ultra personalized'} email ready to send.`)
+  }
+
+  function copyBrief() {
+    if (!selectedMatch) return
+    const target = bestMatchForSelectedSeller || selectedMatch
+    const brief = buildSalesBrief(target)
+    const lines = [
+      `Campaign 1 Fit Brief`,
+      '',
+      `Seller: ${target.seller_name}`,
+      `Best-fit marketplace: ${target.marketplace_name}`,
+      `Fit score: ${Number(target.compatibility_score ?? 0).toFixed(1)}`,
+      '',
+      `Executive summary: ${brief.executiveSummary}`,
+      '',
+      `Primary contact: ${brief.contactPlan.primaryName} (${brief.contactPlan.primaryEmail})`,
+      `Contact confidence: ${brief.contactPlan.confidence}`,
+      `Immediate action: ${brief.contactPlan.nextAction}`,
+      '',
+      'Why this marketplace now:',
+      ...brief.whyThisMarketplace.map((line) => `- ${line}`),
+      '',
+      'Risk and mitigation:',
+      ...brief.riskMitigation.map((line) => `- ${line}`),
+      '',
+      '7-day activation plan:',
+      ...brief.first7Days.map((line) => `- ${line}`),
+      '',
+      `Suggested email subject: ${drafts.detailed.subject}`,
+    ]
+    navigator.clipboard.writeText(lines.join('\n'))
+    setBriefCopied(true)
+    notify('success', 'Seller opportunity brief copied.')
+    window.setTimeout(() => setBriefCopied(false), 1800)
   }
 
   const withContact = matches.filter((m) => !!m.decision_maker_email).length
@@ -379,33 +690,16 @@ export default function C2CampaignFollow() {
 
   async function runApolloContactFinder() {
     setApolloRunning(true)
-    const beforeMissing = matches.filter((m) => !m.decision_maker_email).length
-    // Placeholder local enrichment trigger: tries to re-attach seller contacts.
-    setMatches((prev) =>
-      prev.map((m) => {
-        if (m.decision_maker_email) return m
-        const seller = sellerById[m.seller_id]
-        const contact = resolveLeadContact(m, seller)
-        if (!contact.email) return m
-        return {
-          ...m,
-          decision_maker_email: contact.email,
-          decision_maker_name: contact.name,
-        }
-      }),
-    )
-    const afterMissing = matches
-      .map((m) => {
-        if (m.decision_maker_email) return m
-        const seller = sellerById[m.seller_id]
-        const contact = resolveLeadContact(m, seller)
-        if (!contact.email) return m
-        return { ...m, decision_maker_email: contact.email }
-      })
-      .filter((m) => !m.decision_maker_email).length
-    const found = Math.max(0, beforeMissing - afterMissing)
-    setApolloRunning(false)
-    notify('info', found > 0 ? `Apollo lookup completed: ${found} contacts attached.` : 'Apollo lookup completed: no new contacts found.')
+    try {
+      const { data, error } = await runApolloContactDemoBatch()
+      if (error) throw new Error(error.message || 'Apollo demo failed')
+      await loadAll()
+      notify('info', data.updated > 0 ? `Apollo lookup completed: ${data.updated} contacts attached.` : 'Apollo lookup completed: no new contacts found.')
+    } catch (error) {
+      notify('error', `Apollo lookup failed (${error?.message || 'unknown'}).`)
+    } finally {
+      setApolloRunning(false)
+    }
   }
 
   return (
@@ -518,6 +812,13 @@ export default function C2CampaignFollow() {
 
       {selectedMatch && (
         <div className="space-y-4">
+          <SellerOpportunityBrief
+            match={selectedMatch}
+            bestForSeller={bestMatchForSelectedSeller}
+            onCopyBrief={copyBrief}
+            copyDone={briefCopied}
+          />
+
           <div className="card">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
@@ -551,10 +852,11 @@ export default function C2CampaignFollow() {
               onSend={sendEmail}
               canSend={!!selectedMatch.decision_maker_email}
               sent={sentFlags.detailed}
+              regenerating={regenLoading.detailed}
             />
 
             <EmailEditorCard
-              title="Short High-Conviction Email"
+              title="Ultra Personalized Email"
               variantKey="short"
               draft={drafts.short}
               onSubjectChange={(v) => updateDraft('short', 'subject', v)}
@@ -563,6 +865,7 @@ export default function C2CampaignFollow() {
               onSend={sendEmail}
               canSend={!!selectedMatch.decision_maker_email}
               sent={sentFlags.short}
+              regenerating={regenLoading.short}
             />
           </div>
         </div>

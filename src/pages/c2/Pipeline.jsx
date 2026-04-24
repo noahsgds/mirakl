@@ -53,8 +53,8 @@ export default function C2Pipeline() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Target size={14} className="text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+              <Target size={15} className="text-slate-700" />
             </div>
             <h1 className="text-2xl font-bold text-text">Pipeline — Campaign 2</h1>
           </div>
@@ -65,8 +65,8 @@ export default function C2Pipeline() {
       {/* Setup required banner */}
       <div className="card border-2 border-blue-100 bg-blue-50 py-4">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Settings size={15} className="text-blue-700" />
+          <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+            <Settings size={15} className="text-slate-700" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-blue-900 mb-0.5">Configuration required</p>
@@ -127,8 +127,8 @@ export default function C2Pipeline() {
 
         {/* Empty state */}
         <div className="py-20 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-            <Target size={24} className="text-blue-400" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+            <Target size={24} className="text-slate-600" />
           </div>
           <p className="text-sm font-semibold text-text mb-1">No leads in this pipeline</p>
           <p className="text-xs text-muted mb-4 max-w-xs mx-auto">

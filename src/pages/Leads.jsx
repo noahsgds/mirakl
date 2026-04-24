@@ -281,7 +281,6 @@ export default function Leads() {
                   onClick={() => { setFilters((f) => ({ ...f, category: c.key })); setPage(0) }}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${filters.category === c.key ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
                 >
-                  <span>{c.emoji}</span>
                   {c.label}
                 </button>
               ))}
@@ -397,7 +396,6 @@ export default function Leads() {
                         return (
                           <div>
                             <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full whitespace-nowrap font-semibold">
-                              <span>{cat.emoji}</span>
                               {cat.label}
                             </span>
                             {present.length > 0 && (

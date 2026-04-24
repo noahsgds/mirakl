@@ -129,11 +129,21 @@ export default function GlobalDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Global view</h1>
-          <p className="text-muted text-sm mt-0.5">All campaigns · Consolidated metrics</p>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+            <img src="/images/logo-mirakl.png" alt="Mirakl" className="h-6 w-6 object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-text">Global view</h1>
+            <p className="text-muted text-sm mt-0.5">All campaigns · Consolidated metrics</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <img
+            src="/images/mirakl-nexus-orb.png"
+            alt="Mirakl Nexus Orb"
+            className="hidden h-11 w-11 flex-shrink-0 object-contain opacity-95 sm:block motion-safe:animate-[spin_16s_linear_infinite] motion-reduce:animate-none"
+          />
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           <span className="text-xs text-muted font-medium">Live</span>
         </div>
@@ -147,8 +157,9 @@ export default function GlobalDashboard() {
           <div className="px-6 pt-6 pb-4">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#E8445A] flex items-center justify-center shadow-sm">
-                  <Zap size={18} className="text-white" fill="white" />
+                <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+                  <img src="/images/logo-mirakl.png" alt="Mirakl" className="h-6 w-6 object-contain" />
+                  <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-[#b33f4f]" />
                 </div>
                 <div>
                   <p className="text-text font-bold text-sm">Amazon FR → Mirakl</p>
@@ -226,8 +237,9 @@ export default function GlobalDashboard() {
           <div className="px-6 pt-6 pb-4">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
-                  <Target size={18} className="text-white" />
+                <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+                  <img src="/images/logo-mirakl.png" alt="Mirakl" className="h-6 w-6 object-contain" />
+                  <span className="absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-[#1f4f9a]" />
                 </div>
                 <div>
                   <p className="text-text font-bold text-sm">Campaign 2</p>

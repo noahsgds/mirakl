@@ -8,8 +8,8 @@ export default function C2Leads() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Target size={14} className="text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+              <Target size={15} className="text-slate-700" />
             </div>
             <h1 className="text-2xl font-bold text-text">Leads — Campaign 2</h1>
           </div>
@@ -28,8 +28,8 @@ export default function C2Leads() {
       </div>
 
       <div className="card py-20 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-          <Users size={24} className="text-blue-400" />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+          <Users size={24} className="text-slate-600" />
         </div>
         <p className="text-sm font-semibold text-text mb-1">No lead pour cette campagne</p>
         <p className="text-xs text-muted mb-4">Configure your data sources to feed this list.</p>

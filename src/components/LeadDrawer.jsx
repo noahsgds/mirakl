@@ -353,7 +353,6 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   const cat = getCategory(data.amazon_sellers.category)
                   return (
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">{cat.emoji}</span>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cat.bg} ${cat.text} ${cat.border}`}>
                         {cat.label}
                       </span>

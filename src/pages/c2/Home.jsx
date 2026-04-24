@@ -49,8 +49,8 @@ export default function C2Home() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Target size={14} className="text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+              <Target size={15} className="text-slate-700" />
             </div>
             <h1 className="text-2xl font-bold text-text">Campaign 2</h1>
           </div>
@@ -113,8 +113,8 @@ export default function C2Home() {
       {/* Info card */}
       <div className="card border-2 border-blue-100 bg-blue-50">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <Zap size={15} className="text-blue-700" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] flex-shrink-0">
+            <Zap size={15} className="text-slate-700" />
           </div>
           <div>
             <p className="text-sm font-semibold text-blue-900 mb-1">How to configure this campaign?</p>

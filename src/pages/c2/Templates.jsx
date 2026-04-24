@@ -8,8 +8,8 @@ export default function C2Templates() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Target size={14} className="text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+              <Target size={15} className="text-slate-700" />
             </div>
             <h1 className="text-2xl font-bold text-text">Templates — Campaign 2</h1>
           </div>

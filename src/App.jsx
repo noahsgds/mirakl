@@ -23,6 +23,7 @@ import C2Dashboard     from './pages/c2/Dashboard'
 import C2Prospects     from './pages/c2/Prospects'
 import C2Marketplaces  from './pages/c2/Marketplaces'
 import C2Matching      from './pages/c2/Matching'
+import C2Analytics     from './pages/c2/Analytics'
 import C2CampaignFollow from './pages/c2/CampaignFollow'
 import C2CampaignParams from './pages/c2/CampaignParams'
 
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="/c2/prospects"      element={<C2Prospects />} />
               <Route path="/c2/marketplaces"   element={<C2Marketplaces />} />
               <Route path="/c2/matching"       element={<C2Matching />} />
+              <Route path="/c2/analytics"      element={<C2Analytics />} />
               <Route path="/c2/email-generation" element={<C2CampaignFollow />} />
               <Route path="/c2/campagne-email" element={<C2CampaignFollow />} />
               <Route path="/c2/campagne"       element={<C2CampaignParams />} />

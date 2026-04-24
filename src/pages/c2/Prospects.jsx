@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, RefreshCw, ExternalLink, Linkedin,
   CheckCircle2, AlertCircle, X, Filter, Download,
-  Tag, Globe, Star, Users, Package, Building2, ChevronDown,
+  Tag, Globe, Star, Users, Package, Building2, ChevronDown, GitBranch,
 } from 'lucide-react'
-import { fetchSellers, fetchMatches, addSellerLocal } from '../../lib/c2'
+import { fetchSellers, fetchMatches, addSellerLocal, runScrapingDemoBatch, runMatchingDemoBatch } from '../../lib/c2'
 
 function enrichmentScore(seller) {
   const fields = [
@@ -52,7 +52,9 @@ export default function C2Prospects() {
   const [page, setPage]             = useState(1)
   const [showAdd, setShowAdd]       = useState(false)
   const [scraping, setScraping]     = useState(false)
+  const [matching, setMatching]     = useState(false)
   const [scrapeResult, setScrapeResult] = useState(null)
+  const [matchingResult, setMatchingResult] = useState(null)
   const [form, setForm]             = useState({ seller_name: '', seller_url: '', categories: '', country_origin: '', brand_tier: '', contact_name: '', contact_email: '' })
   const [formError, setFormError]   = useState('')
   const [saving, setSaving]         = useState(false)
@@ -95,6 +97,19 @@ export default function C2Prospects() {
     })
   }, [sellers, search, filterTier, filterCountry, filterContact, filterWebsite, filterInternational, minMatches, minEnrichment, matchCounts])
 
+  const liveKpis = useMemo(() => {
+    const visible = filtered
+    const withContact = visible.filter((seller) => !!(seller.contact_email || seller.wholesale_contact_email)).length
+    const withMatches = visible.filter((seller) => (matchCounts[seller.seller_id] ?? 0) > 0).length
+    const fullyEnriched = visible.filter((seller) => enrichmentScore(seller) >= 75).length
+    return {
+      total: visible.length,
+      withContact,
+      withMatches,
+      fullyEnriched,
+    }
+  }, [filtered, matchCounts])
+
   useEffect(() => {
     setPage(1)
   }, [search, filterTier, filterCountry, filterContact, filterWebsite, filterInternational, minMatches, minEnrichment])
@@ -110,13 +125,38 @@ export default function C2Prospects() {
     return filtered.slice(start, start + PAGE_SIZE)
   }, [filtered, page, PAGE_SIZE])
 
-  function mockScrape() {
+  async function mockScrape() {
     setScraping(true)
     setScrapeResult(null)
-    setTimeout(() => {
+    try {
+      const { data, error } = await runScrapingDemoBatch()
+      if (error) throw new Error(error.message || 'Scraping demo failed')
+      setScrapeResult({
+        found: data.found,
+        imported: data.imported,
+        skipped: data.skipped,
+        errored: data.errored,
+      })
+      await load()
+    } finally {
       setScraping(false)
-      setScrapeResult({ found: 24, imported: 18, skipped: 5, errored: 1 })
-    }, 2200)
+    }
+  }
+
+  async function runMatching() {
+    setMatching(true)
+    setMatchingResult(null)
+    try {
+      const { data, error } = await runMatchingDemoBatch()
+      if (error) throw new Error(error.message || 'Matching demo failed')
+      setMatchingResult({
+        batchSize: data.batchSize,
+        added: data.added,
+      })
+      await load()
+    } finally {
+      setMatching(false)
+    }
   }
 
   async function addProspect() {
@@ -192,8 +232,16 @@ export default function C2Prospects() {
             {scraping ? 'Scraping…' : 'Run Scraping'}
           </button>
           <button
+            onClick={runMatching}
+            disabled={matching}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-[#2563EB] text-white hover:bg-[#1d4ed8] disabled:opacity-60 transition-colors"
+          >
+            <GitBranch size={13} className={matching ? 'animate-spin' : ''} />
+            {matching ? 'Matching…' : 'Run Matching'}
+          </button>
+          <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-[#2563EB] text-white hover:bg-[#1d4ed8] transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-[#0f172a] text-white hover:bg-[#1e293b] transition-colors"
           >
             <Plus size={13} /> Add Prospect
           </button>
@@ -216,18 +264,31 @@ export default function C2Prospects() {
         </motion.div>
       )}
 
+      {matchingResult && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="card border border-blue-200 bg-blue-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6 text-sm">
+              <span className="font-semibold text-blue-800">Matching completed</span>
+              <span className="text-blue-700">Batch size: <b>{matchingResult.batchSize}</b></span>
+              <span className="text-blue-700">New matches: <b>{matchingResult.added}</b></span>
+            </div>
+            <button onClick={() => setMatchingResult(null)} className="text-muted hover:text-text"><X size={14} /></button>
+          </div>
+        </motion.div>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Total prospects',     value: sellers.length,                                           icon: Users },
-          { label: 'With contact',        value: sellers.filter(s => s.contact_email).length,              icon: CheckCircle2 },
-          { label: 'With matches',        value: Object.keys(matchCounts).length,                          icon: Building2 },
-          { label: 'Fully enriched (≥75)',value: sellers.filter(s => enrichmentScore(s) >= 75).length,     icon: Star },
+          { label: 'Total prospects',      value: liveKpis.total,         icon: Users },
+          { label: 'With contact',         value: liveKpis.withContact,   icon: CheckCircle2 },
+          { label: 'With matches',         value: liveKpis.withMatches,   icon: Building2 },
+          { label: 'Fully enriched (≥75)', value: liveKpis.fullyEnriched, icon: Star },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="card">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center">
-                <Icon size={17} className="text-[#2563EB]" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/80 bg-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                <Icon size={17} className="text-[#1f3a5c]" strokeWidth={1.8} />
               </div>
               <div>
                 <div className="text-xl font-bold text-text">{value}</div>

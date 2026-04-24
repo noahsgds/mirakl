@@ -3,7 +3,7 @@
  *
  * Chaque catégorie map vers :
  *   - label : nom FR affiché
- *   - emoji : pictogramme (cockpit visuel)
+ *   - emoji : deprecated (kept for backward compatibility)
  *   - color : palette Tailwind-compat (pour badges / tuiles)
  *   - marketplaces : array de partenaires Mirakl auxquels on pitche ces sellers
  *
@@ -22,7 +22,7 @@ export const CATEGORIES = [
   {
     key: 'mode',
     label: 'Mode',
-    emoji: '👗',
+    emoji: '',
     color: 'from-pink-500 to-rose-500',
     bg: 'bg-pink-500/10',
     text: 'text-pink-400',
@@ -33,7 +33,7 @@ export const CATEGORIES = [
   {
     key: 'beaute',
     label: 'Beauté',
-    emoji: '💄',
+    emoji: '',
     color: 'from-fuchsia-500 to-purple-500',
     bg: 'bg-fuchsia-500/10',
     text: 'text-fuchsia-400',
@@ -44,7 +44,7 @@ export const CATEGORIES = [
   {
     key: 'maison',
     label: 'Maison',
-    emoji: '🛋️',
+    emoji: '',
     color: 'from-amber-500 to-orange-500',
     bg: 'bg-amber-500/10',
     text: 'text-amber-400',
@@ -55,7 +55,7 @@ export const CATEGORIES = [
   {
     key: 'sport',
     label: 'Sport',
-    emoji: '🏃',
+    emoji: '',
     color: 'from-green-500 to-emerald-500',
     bg: 'bg-green-500/10',
     text: 'text-green-400',
@@ -66,7 +66,7 @@ export const CATEGORIES = [
   {
     key: 'enfant',
     label: 'Enfant & Bébé',
-    emoji: '🧸',
+    emoji: '',
     color: 'from-sky-500 to-blue-500',
     bg: 'bg-sky-500/10',
     text: 'text-sky-400',
@@ -77,7 +77,7 @@ export const CATEGORIES = [
   {
     key: 'electronique',
     label: 'Électronique',
-    emoji: '🎧',
+    emoji: '',
     color: 'from-indigo-500 to-violet-500',
     bg: 'bg-indigo-500/10',
     text: 'text-indigo-400',
@@ -88,7 +88,7 @@ export const CATEGORIES = [
   {
     key: 'culture',
     label: 'Culture',
-    emoji: '📚',
+    emoji: '',
     color: 'from-yellow-500 to-amber-500',
     bg: 'bg-yellow-500/10',
     text: 'text-yellow-400',
@@ -99,7 +99,7 @@ export const CATEGORIES = [
   {
     key: 'bricolage',
     label: 'Bricolage',
-    emoji: '🔧',
+    emoji: '',
     color: 'from-orange-600 to-red-500',
     bg: 'bg-orange-500/10',
     text: 'text-orange-400',
@@ -137,8 +137,8 @@ export function marketplacesFor(categoryKey) {
 }
 
 /**
- * Retourne l'emoji d'une catégorie (fallback sac d'emballage).
+ * Retourne l'ancien champ emoji (deprecated).
  */
 export function categoryEmoji(key) {
-  return CATEGORY_BY_KEY[key]?.emoji || '📦'
+  return CATEGORY_BY_KEY[key]?.emoji || ''
 }
