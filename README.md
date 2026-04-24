@@ -1,122 +1,122 @@
 # 🎯 UC2 — Amazon FR → Zalando
-## Hackathon Mirakl | Eugenia School
+## Mirakl Hackathon | Eugenia School
 
-> Pipeline automatisé qui détecte, score, enrichit et recrute les meilleurs vendeurs Amazon FR pour la marketplace Zalando via Mirakl Connect.
+> Automated pipeline that detects, scores, enriches and recruits the best Amazon FR sellers for the Zalando marketplace via Mirakl Connect.
 
-**Présenté à** : Juliette Pichard, Sr VP Global Sales Acceleration  
+**Presented to** : Juliette Pichard, Sr VP Global Sales Acceleration  
 **Stack** : N8N + OpenAI GPT-4o + Supabase + Apollo + Clay + Brevo  
-**Rôle dans UC2** : 50% du projet (bloc Amazon FR → Zalando)
+**Role in UC2** : 50% of the project (Amazon FR → Zalando block)
 
 ---
 
-## 🎯 Contexte & Enjeux
+## 🎯 Context & Stakes
 
-Les BDR Mirakl Connect identifient manuellement des vendeurs Amazon FR pertinents pour Zalando.
+Mirakl Connect BDRs manually identify relevant Amazon FR sellers for Zalando.
 
-**Problème :**
-- Processus manuel = lent, coûteux, non scalable
-- 1 BDR = ~10 vendeurs analysés/semaine
-- Scoring subjectif, non justifiable
+**The problem :**
+- Manual process = slow, costly, not scalable
+- 1 BDR = ~10 sellers analyzed per week
+- Subjective scoring, impossible to justify
 
-**Notre solution :**
-- 109 vendeurs scorés automatiquement
-- 5 secondes par vendeur vs plusieurs jours
-- 80% de réduction de charge BDR
-- Score 100% explicable sur 5 critères
+**Our solution :**
+- 109 sellers scored automatically
+- 5 seconds per seller vs several days manually
+- 80% reduction in BDR workload
+- Score 100% explainable across 5 criteria
 
 ---
 
-## 👥 Équipe
+## 👥 Team
 
-| Rôle | Prénom | Responsabilités |
-|------|--------|-----------------|
-| CEO / Coordinateur | Noah | Architecture, prompts OpenAI, pitch jury |
-| CDO / Scraping | Victorien | Scraping Amazon FR, enrichissement, base |
-| CAIO / AI Agent | Jahdiel | Agent scoring, logique matching, JSON |
+| Role | Name | Responsibilities |
+|------|------|-----------------|
+| CEO / Coordinator | Noah | Architecture, OpenAI prompts, jury pitch |
+| CDO / Scraping | Victorien | Amazon FR scraping, enrichment, database |
+| CAIO / AI Agent | Jahdiel | Scoring agent, matching logic, JSON |
 
 ---
 
 ## 🏗️ Architecture — 6 Workflows
 
 ```
-Workflow 1 → Filtrage & Déduplication
-     ↓       (scheduler toutes les 5 min)
-Workflow 2 → Agent DUST Scoring (GPT-4o)
-     ↓       (score sur 5 critères Mirakl)
-Workflow 3 → Enrichissement Décideur
+Workflow 1 → Filtering & Deduplication
+     ↓       (scheduler every 5 min)
+Workflow 2 → DUST Scoring Agent (GPT-4o)
+     ↓       (score on 5 Mirakl criteria)
+Workflow 3 → Decision-Maker Enrichment
      ↓       (Apollo + Clay)
-Workflow 4 → Génération Emails par IA
-     ↓       (GPT-4o, 3 emails/vendeur)
-Workflow 5 → Séquence Brevo J0 / J+3 / J+6
-     ↓       (envoi automatisé)
-Workflow 6 → Tracking Brevo (Webhook)
-             (temps réel : open/clic/réponse)
+Workflow 4 → AI Email Generation
+     ↓       (GPT-4o, 3 emails/seller)
+Workflow 5 → Brevo Sequence D0 / D+3 / D+6
+     ↓       (automated sending)
+Workflow 6 → Brevo Tracking (Webhook)
+             (real-time : open/click/reply)
 ```
 
 ---
 
-## ⚙️ Stack Technique
+## ⚙️ Tech Stack
 
-| Outil | Version | Rôle |
-|-------|---------|------|
-| N8N Cloud | v1.88 | Orchestration 6 workflows |
-| OpenAI GPT-4o | gpt-4o-2024-11-20 | Scoring IA + génération emails |
-| Supabase | v2.x (PostgreSQL 15) | Base de données + API REST |
-| Apollo | API v2 | Enrichissement email décideur |
-| Clay | Enterprise | Enrichissement entreprise |
-| Brevo | API v3 | Envoi emails + tracking événements |
+| Tool | Version | Role |
+|------|---------|------|
+| N8N Cloud | v1.88 | 6 workflow orchestration |
+| OpenAI GPT-4o | gpt-4o-2024-11-20 | AI scoring + email generation |
+| Supabase | v2.x (PostgreSQL 15) | Database + REST API |
+| Apollo | API v2 | Decision-maker email enrichment |
+| Clay | Enterprise | Company enrichment |
+| Brevo | API v3 | Email sending + event tracking |
 
 ---
 
 ## 🕷️ Module 0 — Amazon FR Seller Scraper
 
-**Fichier** : `scraper/amazon_scraper_v4.py`  
-**Langage** : Python 3.11  
-**Rôle** : Collecte automatisée des vendeurs tiers Amazon FR et alimentation de la table `amazon_sellers` dans Supabase.
+**File** : `scraper/amazon_scraper_v4.py`  
+**Language** : Python 3.11  
+**Role** : Automated collection of third-party Amazon FR sellers and population of the `amazon_sellers` table in Supabase.
 
 ---
 
-### Ce que fait le scraper
+### What the scraper does
 
-Notre pipeline commence par une question simple :  
-**"Quels vendeurs Amazon FR valent la peine d'être contactés pour Zalando ?"**
+Our pipeline starts with a simple question :  
+**"Which Amazon FR sellers are worth reaching out to for Zalando?"**
 
-Le scraper répond à cette question automatiquement en 4 étapes :
+The scraper answers this question automatically in 4 steps :
 
-**1. Il cherche des produits Amazon FR**  
-→ Lance 60+ recherches mode/sport/lifestyle sur Amazon FR  
-→ Récupère les ASINs des produits trouvés  
-→ Ex : "robe femme", "jean homme", "running femme"...
+**1. It searches Amazon FR products**  
+→ Runs 60+ fashion/sport/lifestyle searches on Amazon FR  
+→ Collects ASINs from the results  
+→ Ex : "women's dress", "men's jeans", "women's running"...
 
-**2. Il identifie les vendeurs TIERS uniquement**  
-→ Pour chaque produit, ouvre la page "Toutes les offres"  
-→ Extrait uniquement les vendeurs indépendants  
-→ Filtre automatiquement Amazon lui-même
+**2. It identifies THIRD-PARTY sellers only**  
+→ For each product, opens the "All offers" page  
+→ Extracts only independent sellers  
+→ Automatically filters out Amazon itself
 
-**3. Il enrichit chaque vendeur**  
-→ Visite le profil `/sp?seller=ID` de chaque vendeur  
-→ Collecte : nom, note, avis, pays, catalogue, prix, infos légales, présence FBA  
-→ Vérifie si le vendeur est déjà sur Zalando
+**3. It enriches each seller**  
+→ Visits each seller's profile at `/sp?seller=ID`  
+→ Collects : name, rating, reviews, country, catalog, pricing, legal info, FBA status  
+→ Checks whether the seller is already on Zalando
 
-**4. Il alimente Supabase**  
-→ Pousse les données dans la table `amazon_sellers`  
-→ Sauvegarde un CSV propre pour la présentation  
-→ Déduplication automatique (pas de doublons)
-
----
-
-### En chiffres
-
-| Métrique | Valeur |
-|----------|--------|
-| Vendeurs collectés | **109** |
-| Temps par vendeur | **~5 secondes** |
-| Requêtes couvertes | **60+ catégories** |
-| Données par vendeur | **25+ champs** |
+**4. It feeds Supabase**  
+→ Pushes data into the `amazon_sellers` table  
+→ Saves a clean CSV for presentation  
+→ Automatic deduplication (no duplicates)
 
 ---
 
-### Ce qu'il passe au Workflow 1
+### By the numbers
+
+| Metric | Value |
+|--------|-------|
+| Sellers collected | **109** |
+| Time per seller | **~5 seconds** |
+| Queries covered | **60+ categories** |
+| Data points per seller | **25+ fields** |
+
+---
+
+### What it passes to Workflow 1
 
 ```
 amazon_sellers (Supabase)
@@ -128,94 +128,94 @@ amazon_sellers (Supabase)
 ├── on_zalando (bool)
 └── statut = "to_enrich"
          ↓
-    Workflow 1 prend le relais
+    Workflow 1 takes over
 ```
 
 ---
 
-### Stratégie en 4 Phases
+### 4-Phase Strategy
 
 ```
-Phase A → Collecte ASINs depuis les pages
-          de recherche Amazon FR
-          (60+ requêtes mode/sport/lifestyle)
+Phase A → Collect ASINs from Amazon FR
+          search result pages
+          (60+ fashion/sport/lifestyle queries)
      ↓
-Phase B → Extraction des seller IDs tiers
-          depuis les pages "toutes les offres"
-          (garantit : 0 vendeur Amazon direct)
+Phase B → Extract third-party seller IDs
+          from "all offers" pages
+          (guarantees : 0 Amazon-direct sellers)
      ↓
-Phase C → Enrichissement via /sp?seller=ID
-          (nom, note, avis, pays, infos légales,
-          catalogue, prix, FBA, marques)
+Phase C → Enrichment via /sp?seller=ID
+          (name, rating, reviews, country,
+          legal info, catalog, price, FBA, brands)
      ↓
-Phase D → Vérification présence Zalando (HTTP)
-          + Push Supabase + export CSV
+Phase D → Zalando presence check (HTTP)
+          + Supabase push + CSV export
 ```
 
 ---
 
-### Stack Technique Scraper
+### Scraper Tech Stack
 
-| Outil | Version | Rôle |
-|-------|---------|------|
+| Tool | Version | Role |
+|------|---------|------|
 | Python | 3.11 | Runtime |
 | undetected-chromedriver | 3.x | Anti-bot Chrome |
-| BeautifulSoup4 | 4.12 | Parsing HTML |
-| Selenium | 4.x | Automation navigateur |
-| Pandas | 2.x | Export CSV |
+| BeautifulSoup4 | 4.12 | HTML parsing |
+| Selenium | 4.x | Browser automation |
+| Pandas | 2.x | CSV export |
 | Requests | 2.x | HTTP direct (Zalando check) |
-| Supabase REST API | v1 | Push données |
+| Supabase REST API | v1 | Data push |
 
 ---
 
-### Données Collectées par Vendeur
+### Data Collected per Seller
 
 ```
-# Identité
+# Identity
 amazon_seller_id, seller_name, seller_url, country
 
-# Infos légales (section vendeur Amazon)
+# Legal info (Amazon seller section)
 business_name, business_type
 trade_register_number, vat_number
 phone, email, business_address
 
-# Métriques Amazon
+# Amazon metrics
 nb_products, rating, nb_reviews
 positive_feedback_pct, avg_price
 min_price, max_price, nb_sales_30d
 years_on_amazon, is_fba, top_brands
 
-# Présence Zalando
+# Zalando presence
 on_zalando (bool), zalando_url
 ```
 
 ---
 
-### Filtres Qualité Appliqués
+### Quality Filters Applied
 
 ```python
-FILTER_MIN_RATING   = 4.0   # Note Amazon minimum
-FILTER_MIN_PRODUCTS = 10    # Catalogue minimum
-# Exclusion automatique des IDs Amazon direct
+FILTER_MIN_RATING   = 4.0   # Minimum Amazon rating
+FILTER_MIN_PRODUCTS = 10    # Minimum catalog size
+# Automatic exclusion of Amazon direct seller IDs
 AMAZON_IDS = {"A13V1IB3VIYZZH", ...}
 ```
 
 ---
 
-### Lancement
+### Running the Scraper
 
 ```bash
-# Installation
+# Install dependencies
 pip install undetected-chromedriver beautifulsoup4 \
             selenium pandas requests supabase
 
-# Usage basique (20 vendeurs)
+# Basic usage (20 sellers)
 python amazon_scraper_v4.py --count 20
 
-# Usage hackathon (109 vendeurs, 4 Chrome parallèles)
+# Hackathon usage (109 sellers, 4 parallel Chrome instances)
 python amazon_scraper_v4.py --count 109 --parallel 4
 
-# Sans déduplication Supabase
+# Without Supabase deduplication
 python amazon_scraper_v4.py --count 50 --no-dedup
 ```
 
@@ -225,89 +225,89 @@ python amazon_scraper_v4.py --count 50 --no-dedup
 
 ```
 output/
-├── amazon_sellers_YYYYMMDD_HHMM.csv  ← données brutes
-├── latest.csv                         ← dernière collecte
-└── latest_clean.csv                   ← version présentation FR
+├── amazon_sellers_YYYYMMDD_HHMM.csv  ← raw data
+├── latest.csv                         ← latest run
+└── latest_clean.csv                   ← clean presentation version
 ```
 
-**→ Push automatique dans Supabase** : `amazon_sellers` (upsert sur `seller_url`)
+**→ Automatic push to Supabase** : `amazon_sellers` (upsert on `seller_url`)
 
 ---
 
-### ⚠️ Points de Fragilité du Scraper
+### ⚠️ Scraper Fragility Points
 
-- Dépend du layout HTML Amazon FR (changements possibles sans préavis)
-- Rate limiting Amazon (délais aléatoires 1-3s intégrés)
-- Nécessite Chrome installé localement
-- Clé Supabase hardcodée → à externaliser en variable d'environnement
-
----
-
-## WORKFLOW 1 — Filtrage & Déduplication
-
-**Rôle** : Détecte les nouveaux vendeurs Amazon scrappés et applique les filtres qualité Zalando.  
-**Fréquence** : Toutes les 5 minutes  
-**Entrée** : Table `amazon_sellers` (first_filter = true)  
-**Sortie** : Table `seller_qualification` → statut `A_SCORER` ou `REJETE_FILTRE`
-
-<img width="2141" height="637" alt="Capture d&#39;écran 2026-04-23 170957" src="https://github.com/user-attachments/assets/d0aa5d4e-7ab9-44ee-96fc-9cbc9db3e7e9" />
-
-
-### Filtres Qualité Zalando
-
-| Critère | Seuil |
-|---------|-------|
-| Catégorie | Mode / Sport / Lifestyle |
-| Note Amazon | ≥ 4.0 |
-| Catalogue | ≥ 20 produits |
-
-### Nœuds
-
-1. **Trigger 5min** → scheduler automatique
-2. **Supabase GET** → vendeurs (first_filter = true)
-3. **Supabase vérification doublon** → déduplication
-4. **IF doublon détecté** → stop si déjà traité
-5. **SplitInBatches** → traitement unitaire
-6. **Code filtrage qualité** → applique les 3 seuils
-7. **IF passe les filtres** → routing A_SCORER / KO
-8. **INSERT seller_qualification** → sauvegarde statut
+- Depends on Amazon FR HTML layout (may break without notice if Amazon updates its structure)
+- Amazon rate limiting (random 1-3s delays built in)
+- Requires Chrome installed locally
+- Supabase key hardcoded → should be moved to environment variable
 
 ---
 
-## WORKFLOW 2 — Agent DUST Scoring
+## WORKFLOW 1 — Filtering & Deduplication
 
-**Rôle** : Score automatiquement chaque vendeur Amazon avec GPT-4o sur 5 critères Mirakl.  
-**Entrée** : Vendeurs `statut = A_SCORER AND score_total IS NULL`  
-**Sortie** : `score_total`, `recommandation`, `angle_approche` mis à jour dans Supabase
+**Role** : Detects newly scraped Amazon sellers and applies Zalando quality filters.  
+**Frequency** : Every 5 minutes  
+**Input** : Table `amazon_sellers` (first_filter = true)  
+**Output** : Table `seller_qualification` → status `A_SCORER` or `REJETE_FILTRE`
 
-<img width="2162" height="693" alt="Capture d&#39;écran 2026-04-23 171041" src="https://github.com/user-attachments/assets/5ba729db-1ff0-4087-b908-f4e34fd2e492" />
+<img width="2146" height="645" alt="Capture d&#39;écran 2026-04-23 164342" src="https://github.com/user-attachments/assets/49b692c7-ab04-4e6a-b302-8862a8c3b102" />
 
 
-### Grille de Scoring — 5 Critères Mirakl
+### Zalando Quality Filters
 
-| Critère | Points | Description |
-|---------|--------|-------------|
-| Alignement Catégorie | 25 pts | Fit mode/sport Zalando |
-| Qualité Vendeur | 25 pts | Note + nb avis Amazon |
-| Taille Catalogue | 20 pts | Nb SKU (seuil : 20 min) |
-| Prix Moyen | 15 pts | Cohérence gamme tarifaire |
-| Dépendance Canal | 15 pts | Risque Amazon-only |
+| Criteria | Threshold |
+|----------|-----------|
+| Category | Fashion / Sport / Lifestyle |
+| Amazon Rating | ≥ 4.0 |
+| Catalog Size | ≥ 20 products |
 
-### Routing Décisionnel
+### Nodes
 
-| Score | Statut | Action |
+1. **5min Trigger** → automatic scheduler
+2. **Supabase GET** → sellers (first_filter = true)
+3. **Supabase duplicate check** → deduplication
+4. **IF duplicate detected** → stop if already processed
+5. **SplitInBatches** → one-by-one processing
+6. **Quality filter code** → applies the 3 thresholds
+7. **IF passes filters** → routing A_SCORER / KO
+8. **INSERT seller_qualification** → save status
+
+---
+
+## WORKFLOW 2 — DUST Scoring Agent
+
+**Role** : Automatically scores each Amazon seller with GPT-4o across 5 Mirakl criteria.  
+**Input** : Sellers with `statut = A_SCORER AND score_total IS NULL`  
+**Output** : `score_total`, `recommandation`, `angle_approche` updated in Supabase
+
+<img width="2152" height="683" alt="Capture d&#39;écran 2026-04-23 164442" src="https://github.com/user-attachments/assets/db19816c-57b4-48cb-a98c-d010edcf9e91" />
+
+
+### Scoring Grid — 5 Mirakl Criteria
+
+| Criteria | Points | Description |
+|----------|--------|-------------|
+| Category Alignment | 25 pts | Fashion/sport fit for Zalando |
+| Seller Quality | 25 pts | Amazon rating + review count |
+| Catalog Size | 20 pts | SKU count (min threshold: 20) |
+| Average Price | 15 pts | Price range consistency |
+| Channel Dependency | 15 pts | Amazon-only risk |
+
+### Decision Routing
+
+| Score | Status | Action |
 |-------|--------|--------|
-| ≥ 70 | QUALIFIE | Email priorité haute |
-| 50-69 | A_REVOIR | Email approche prudente |
-| < 50 | REJETE | Archivé, exclu campagnes |
+| ≥ 70 | QUALIFIED | High-priority email |
+| 50-69 | TO_REVIEW | Cautious approach email |
+| < 50 | REJECTED | Archived, excluded from campaigns |
 
-### Sortie JSON GPT-4o
+### GPT-4o JSON Output
 
 ```json
 {
   "score_total": 75,
   "recommandation": "QUALIFIE",
-  "angle_approche": "Catalogue 150 SKUs aligné Zalando",
+  "angle_approche": "150 SKU catalog aligned with Zalando",
   "contexte_detecte": "amazon_only",
   "criteres": {
     "alignement_categorie": {"score": 20, "justification": "..."},
@@ -319,155 +319,155 @@ output/
 }
 ```
 
-### Nœuds
+### Nodes
 
-1. **Trigger Workflow 2** → déclenché par Workflow 1
-2. **Supabase GET** → vendeurs A_SCORER sans score
-3. **SplitInBatches** → traitement un par un
-4. **Message a model** → appel GPT-4o (scoring)
-5. **Code JavaScript** → parse JSON réponse IA
-6. **HTTP Request PATCH** → sauvegarde score Supabase
-7. **IF Score ≥ 50** → routing qualifié / rejeté
-8. **PATCH REJETE** → archivage vendeurs < 50
+1. **Workflow 2 Trigger** → triggered by Workflow 1
+2. **Supabase GET** → A_SCORER sellers without score
+3. **SplitInBatches** → one-by-one processing
+4. **Message a model** → GPT-4o call (scoring)
+5. **JavaScript code** → parse AI JSON response
+6. **HTTP Request PATCH** → save score to Supabase
+7. **IF Score ≥ 50** → qualified / rejected routing
+8. **PATCH REJECTED** → archive sellers < 50
 
 ---
 
-## WORKFLOW 3 — Enrichissement Décideur
+## WORKFLOW 3 — Decision-Maker Enrichment
 
-**Rôle** : Identifie et enrichit les coordonnées du décideur pour chaque vendeur qualifié via Apollo et Clay.  
-**Entrée** : Vendeurs `statut = scored`  
-**Sortie** : `seller_qualification.statut = enriched` + email décideur sauvegardé
+**Role** : Identifies and enriches decision-maker contact details for each qualified seller via Apollo and Clay.  
+**Input** : Sellers with `statut = scored`  
+**Output** : `seller_qualification.statut = enriched` + decision-maker email saved
 
-<img width="2163" height="519" alt="Capture d&#39;écran 2026-04-23 171118" src="https://github.com/user-attachments/assets/a71138c2-c1c0-4b1e-8d46-df0873d452d4" />
+<img width="2539" height="605" alt="Capture d&#39;écran 2026-04-23 165413" src="https://github.com/user-attachments/assets/e23b2572-a5d0-4c9c-b768-2655fdb186f4" />
 
 
-### Sources d'Enrichissement
+### Enrichment Sources
 
-| Source | Rôle |
+| Source | Role |
 |--------|------|
-| Apollo Search v2 | Recherche email par domaine |
-| Apollo Match | Vérification email trouvé |
-| Clay Enterprise | Enrichissement entreprise |
-| Mode Manuel | Fallback si APIs échouent |
+| Apollo Search v2 | Email search by domain |
+| Apollo Match | Email verification |
+| Clay Enterprise | Company enrichment |
+| Manual Mode | Fallback if APIs fail |
 
-### Nœuds Clés
+### Key Nodes
 
-1. **HTTP Request** → scrape page vendeur Amazon
-2. **Code** → extraction domaine officiel
-3. **IF domaine trouvé** → routing enrichissement
-4. **Apollo Search v2** → recherche email décideur
-5. **Wait 2s** → respect rate limit Apollo
-6. **Apollo Match** → confirmation email valide
-7. **Switch Mode** → Apollo / Clay / Manuel
-8. **Clay enrichissement** → données entreprise
-9. **IF Email trouvé** → validation finale
-10. **PATCH seller_qualification** → sauvegarde
-
----
-
-## WORKFLOW 4 — Génération Emails par IA
-
-**Rôle** : Génère 3 emails hyper-personnalisés par vendeur via GPT-4o.  
-**Entrée** : `seller_qualification.statut = enriched`  
-**Sortie** : 3 emails sauvegardés dans `seller_emails` + statut → `emails_generés`
-
-<img width="2239" height="1036" alt="Capture d&#39;écran 2026-04-23 171216" src="https://github.com/user-attachments/assets/cd493892-fe68-4ea1-b760-68aefac0100f" />
-
-
-### Emails Générés
-
-| Email | Timing | Objectif |
-|-------|--------|----------|
-| Mail 1 | J0 | Approche initiale (angle_approche) |
-| Mail 2 | J+3 | Relance alternative |
-| Mail 3 | J+6 | Email de conclusion |
-
-### Nœuds Clés
-
-1. **Webhook / Trigger** → lancement génération
-2. **Code Build query** → filtre vendeurs enrichis
-3. **IF vendeurs à emailer** → vérification
-4. **SplitInBatches** → traitement unitaire
-5. **Set Config génération** → paramètres IA
-6. **Code Fetch templates** → 3 templates Supabase
-7. **Code Calcul métriques & langue** → contexte vendeur
-8. **GPT-4o** → génération 3 emails personnalisés
-9. **Code Parse emails** → extraction JSON
-10. **IF génération OK** → validation
-11. **INSERT seller_emails** → sauvegarde emails
-12. **PATCH Template times_used** → tracking usage
-13. **PATCH statut emails_generés** → mise à jour
+1. **HTTP Request** → scrape Amazon seller page
+2. **Code** → official domain extraction
+3. **IF domain found** → enrichment routing
+4. **Apollo Search v2** → search decision-maker email
+5. **Wait 2s** → Apollo rate limit compliance
+6. **Apollo Match** → valid email confirmation
+7. **Switch Mode** → Apollo / Clay / Manual
+8. **Clay enrichment** → company data
+9. **IF email found** → final validation
+10. **PATCH seller_qualification** → save
 
 ---
 
-## WORKFLOW 5 — Séquence Brevo J0 / J+3 / J+6
+## WORKFLOW 4 — AI Email Generation
 
-**Rôle** : Envoie automatiquement la séquence de 3 emails via Brevo avec délais programmés.  
-**Entrée** : `seller_qualification.statut = emails_generés`  
-**Sortie** : `seller_sequence` mis à jour + séquence email complète envoyée
+**Role** : Generates 3 hyper-personalized emails per seller via GPT-4o based on score and approach angle.  
+**Input** : `seller_qualification.statut = enriched`  
+**Output** : 3 emails saved in `seller_emails` + status → `emails_generés`
 
-<img width="2373" height="532" alt="Capture d&#39;écran 2026-04-23 171301" src="https://github.com/user-attachments/assets/d8ec31bf-5e68-4fe5-9e1f-c3da9930696e" />
+<img width="2281" height="891" alt="Capture d&#39;écran 2026-04-23 165622" src="https://github.com/user-attachments/assets/78b0c3c5-798e-4ada-a96d-64db40185065" />
 
 
-### Séquence d'Envoi
+### Emails Generated
+
+| Email | Timing | Goal |
+|-------|--------|------|
+| Mail 1 | D0 | Initial outreach (angle_approche) |
+| Mail 2 | D+3 | Alternative follow-up |
+| Mail 3 | D+6 | Closing email |
+
+### Key Nodes
+
+1. **Webhook / Trigger** → generation launch
+2. **Code Build query** → filter enriched sellers
+3. **IF sellers to email** → verification
+4. **SplitInBatches** → one-by-one processing
+5. **Set generation config** → AI parameters
+6. **Code Fetch templates** → 3 Supabase templates
+7. **Code metrics & language** → seller context
+8. **GPT-4o** → generate 3 personalized emails
+9. **Code Parse emails** → JSON extraction
+10. **IF generation OK** → validation
+11. **INSERT seller_emails** → save emails
+12. **PATCH Template times_used** → usage tracking
+13. **PATCH status emails_generés** → update
+
+---
+
+## WORKFLOW 5 — Brevo Sequence D0 / D+3 / D+6
+
+**Role** : Automatically sends the 3-email sequence via Brevo with programmed delays.  
+**Input** : `seller_qualification.statut = emails_generés`  
+**Output** : `seller_sequence` updated + full email sequence sent
+
+<img width="2154" height="456" alt="Capture d&#39;écran 2026-04-23 165737" src="https://github.com/user-attachments/assets/43e69f53-9de2-404d-9baf-a168f7809900" />
+
+
+### Sending Sequence
 
 ```
-J0   → Mail 1 envoyé immédiatement
-J+3  → Mail 2 si pas de réponse
-J+6  → Mail 3 (email de conclusion)
+D0   → Mail 1 sent immediately
+D+3  → Mail 2 if no reply
+D+6  → Mail 3 (closing email)
 ```
 
-### Nœuds Clés
+### Key Nodes
 
-1. **Webhook / Trigger** → lancement séquence
-2. **Code Build query** → filtre vendeurs prêts
-3. **IF vendeurs à envoyer** → vérification
-4. **SplitInBatches** → traitement unitaire
-5. **Brevo Créer contact** → inscription liste
-6. **INSERT seller_sequence** → initialisation tracking
-7. **Brevo Envoi Mail 1 (J0)** → envoi immédiat
-8. **PATCH sequence_en_cours** → statut Supabase
-9. **Wait J+3** → attente 3 jours
-10. **Code Recharge données** → refresh vendeur
-11. **PATCH sequence step 2** → mise à jour
-12. **Brevo Envoi Mail 2 (J+3)** → relance
-13. **Wait J+3** → attente 3 jours supplémentaires
-14. **Brevo Envoi Mail 3 (J+6)** → conclusion
-15. **PATCH sequence_terminée** → clôture séquence
+1. **Webhook / Trigger** → sequence launch
+2. **Code Build query** → filter ready sellers
+3. **IF sellers to send** → verification
+4. **SplitInBatches** → one-by-one processing
+5. **Brevo Create contact** → list subscription
+6. **INSERT seller_sequence** → tracking initialization
+7. **Brevo Send Mail 1 (D0)** → immediate send
+8. **PATCH sequence_en_cours** → Supabase status
+9. **Wait D+3** → 3-day wait
+10. **Code Reload data** → seller data refresh
+11. **PATCH sequence step 2** → update
+12. **Brevo Send Mail 2 (D+3)** → follow-up
+13. **Wait D+3** → additional 3-day wait
+14. **Brevo Send Mail 3 (D+6)** → closing
+15. **PATCH sequence_terminée** → sequence close
 
 ---
 
-## WORKFLOW 6 — Tracking Brevo (Webhook)
+## WORKFLOW 6 — Brevo Tracking (Webhook)
 
-**Rôle** : Reçoit les événements Brevo en temps réel et met à jour le statut du lead dans Supabase.  
-**Entrée** : Webhook Brevo (POST à chaque événement)  
-**Sortie** : `seller_qualification` + `seller_sequence` mis à jour en temps réel
+**Role** : Receives Brevo events in real time and updates lead status in Supabase.  
+**Input** : Brevo Webhook (POST on each event)  
+**Output** : `seller_qualification` + `seller_sequence` updated in real time
 
-<img width="2143" height="523" alt="Capture d&#39;écran 2026-04-23 171341" src="https://github.com/user-attachments/assets/3360b5f2-3e0b-451d-bbbb-30ce0b7109bd" />
+<img width="1800" height="672" alt="image" src="https://github.com/user-attachments/assets/4d11e78e-cdd8-4063-8ed9-50732b52d3aa" />
 
 
-### Événements Trackés
+### Tracked Events
 
-| Événement | Action | Statut |
-|-----------|--------|--------|
+| Event | Action | Status |
+|-------|--------|--------|
 | opened | opened_count +1 | — |
 | clicked | clicked_count +1 | HOT 🔥 |
 | replied | replied = true | REPLIED 💬 |
 | bounce | bounced = true | BOUNCE ❌ |
 
-### Nœuds
+### Nodes
 
-1. **Webhook Brevo Events** → point d'entrée
-2. **Code Parse événement** → seller_id + event_type
-3. **IF Seller ID trouvé** → validation
-4. **Code Build PATCH payload** → construction JSON
-5. **PATCH seller_sequence** → mise à jour compteurs
-6. **IF Mettre à jour qualification** → filtre significatif
+1. **Brevo Events Webhook** → entry point
+2. **Code Parse event** → seller_id + event_type
+3. **IF Seller ID found** → validation
+4. **Code Build PATCH payload** → JSON construction
+5. **PATCH seller_sequence** → update counters
+6. **IF Update qualification** → significant event filter
 7. **PATCH seller_qualification** → HOT/REPLIED/BOUNCE
 
 ---
 
-## 🗄️ Structure Base de Données
+## 🗄️ Database Structure
 
 ### Table `amazon_sellers`
 
@@ -483,7 +483,7 @@ on_zalando        BOOLEAN
 statut            TEXT   -- A_SCORER / REJETE
 score_total       INT    -- 0-100
 recommandation    TEXT   -- QUALIFIE / A_REVOIR / REJETE
-angle_approche    TEXT   -- pitch personnalisé
+angle_approche    TEXT   -- personalized pitch
 contexte_detecte  TEXT   -- amazon_only / multi_canal
 ```
 
@@ -519,123 +519,123 @@ clicked_count     INT
 replied           BOOLEAN
 bounced           BOOLEAN
 last_event_at     TIMESTAMP
-sequence_step     INT    -- 1, 2 ou 3
+sequence_step     INT    -- 1, 2 or 3
 ```
 
 ---
 
-## 📧 Exemple Email Généré — UC2 Spécifique
+## 📧 Email Example — UC2 Specific
 
-### Vendeur analysé : MoveWear Studio
+### Seller analyzed : MoveWear Studio
 
-**Signaux détectés par le pipeline :**
+**Signals detected by the pipeline :**
 
-| Signal détecté | Valeur | Impact sur l'email |
-|---------------|--------|-------------------|
-| Catalogue sport | 26 produits | → Angle "croissance catalogue" |
-| Note Amazon | 4.6/5 | → Preuve de qualité mentionnée |
-| Contexte | amazon_only | → Argument diversification canal |
-| Score Mirakl | 78/100 | → Classé QUALIFIE priorité haute |
-| Langue détectée | Français | → Email généré en FR |
+| Signal detected | Value | Impact on email |
+|----------------|-------|----------------|
+| Sport catalog | 26 products | → "Catalog growth" angle |
+| Amazon rating | 4.6/5 | → Quality proof mentioned |
+| Context | amazon_only | → Channel diversification argument |
+| Mirakl score | 78/100 | → Classified QUALIFIED high priority |
+| Detected language | French | → Email generated in FR |
 
 ---
 
-### Mail 1 — J0 (Premier contact)
+### Mail 1 — D0 (First contact)
 
-**Objet** : `Étendre votre succès MoveWear Studio sur Zalando`
+**Subject** : `Extend your success as MoveWear Studio on Zalando`
 
-> **Annotation** : L'objet utilise le nom exact du vendeur
-> [signal : seller_name] + la marketplace cible
-> [signal : recommandation = QUALIFIE pour Zalando]
+> **Annotation** : Subject uses the seller's exact name
+> [signal : seller_name] + the target marketplace
+> [signal : recommandation = QUALIFIE for Zalando]
 
-**Corps :**
+**Body :**
 
-> MoveWear Studio, fort de votre catalogue de 26 produits
-> [← signal : nb_products] et d'une note Amazon
-> exceptionnelle de 4.6/5 [← signal : rating],
-> vous avez un potentiel de croissance énorme.
+> MoveWear Studio, with your catalog of 26 products
+> [← signal : nb_products] and an exceptional Amazon
+> rating of 4.6/5 [← signal : rating],
+> you have enormous growth potential.
 >
-> En rejoignant Zalando, vous pourriez augmenter votre GMV
-> de 30% [← signal : contexte_detecte = amazon_only
-> → argument diversification canal].
+> By joining Zalando, you could increase your GMV
+> by 30% [← signal : contexte_detecte = amazon_only
+> → channel diversification argument].
 >
-> Discutons de cette opportunité lors d'un appel de 20 minutes.
+> Let's discuss this opportunity in a 20-minute call.
 
-**[Planifier un appel]**
+**[Schedule a call]**
 
 *Jean Dupont — Partner Manager, Mirakl Connect*
 
 ---
 
-### Mail 2 — J+3 (Relance)
+### Mail 2 — D+3 (Follow-up)
 
-**Objet** : `MoveWear Studio x Zalando : une opportunité renouvelée`
+**Subject** : `MoveWear Studio x Zalando : a renewed opportunity`
 
-> **Annotation** : Ton différent du Mail 1 — approche "partenariat"
-> vs "croissance" [signal : ab_variant = template_2]
-
----
-
-### Mail 3 — J+6 (Conclusion)
-
-**Objet** : `Dernière chance pour MoveWear Studio...`
-
-> **Annotation** : Urgence douce — dernier email de la séquence
-> [signal : sequence_step = 3]
+> **Annotation** : Different tone from Mail 1 — "partnership"
+> approach vs "growth" [signal : ab_variant = template_2]
 
 ---
 
-### Comment le pipeline personnalise chaque email
+### Mail 3 — D+6 (Closing)
+
+**Subject** : `Last message for MoveWear Studio...`
+
+> **Annotation** : Soft urgency — last email of the
+> automated sequence [signal : sequence_step = 3]
+
+---
+
+### How the pipeline personalizes each email
 
 ```
-Données brutes Amazon FR
+Raw Amazon FR data
         ↓
-[WF1] Filtrage qualité (note ≥ 4.0, catalogue ≥ 20)
+[WF1] Quality filter (rating ≥ 4.0, catalog ≥ 20)
         ↓
-[WF2] GPT-4o scoring → angle_approche détecté
-      ex : "amazon_only" → argument diversification
+[WF2] GPT-4o scoring → angle_approche detected
+      ex : "amazon_only" → diversification argument
         ↓
-[WF3] Enrichissement décideur (Apollo)
+[WF3] Decision-maker enrichment (Apollo)
       → decision_maker_name, email
         ↓
-[WF4] GPT-4o génération
+[WF4] GPT-4o generation
       → seller_name + nb_products + rating
-      + angle_approche + marketplace_cible
-      = Email 100% personnalisé
+      + angle_approche + target_marketplace
+      = 100% personalized email
         ↓
-[WF5] Brevo → envoi J0 / J+3 / J+6
+[WF5] Brevo → send D0 / D+3 / D+6
         ↓
-[WF6] Tracking → HOT si clic / REPLIED si réponse
+[WF6] Tracking → HOT if click / REPLIED if reply
 ```
 
 ---
 
-## 📈 Résultats
+## 📈 Results
 
-| Métrique | Valeur |
-|----------|--------|
-| Vendeurs scorés | 109 automatiquement |
-| Temps par vendeur | ~5 secondes |
-| Distribution scores | 31 → 86/100 |
-| Réduction charge BDR | ~80% |
-| Exécutions en production | **707** |
-| Taux de succès | **99.9%** |
-| Temps moyen d'exécution | **0.86s** |
+| Metric | Value |
+|--------|-------|
+| Sellers scored | 109 automatically |
+| Time per seller | ~5 seconds |
+| Score distribution | 31 → 86/100 |
+| BDR workload reduction | ~80% |
+| Production executions | **707** |
+| Success rate | **99.9%** |
+| Average execution time | **0.86s** |
 
 ---
 
-## 🔧 Configuration & Déploiement
+## 🔧 Configuration & Deployment
 
-### Prérequis
+### Prerequisites
 
-- Compte N8N Cloud actif
-- Clé API OpenAI (GPT-4o)
-- Projet Supabase configuré
-- Compte Apollo (enrichissement)
-- Compte Clay Enterprise
-- Compte Brevo + webhook configuré
+- Active N8N Cloud account
+- OpenAI API key (GPT-4o)
+- Configured Supabase project
+- Apollo account (enrichment)
+- Clay Enterprise account
+- Brevo account + configured webhook
 
-### Variables d'Environnement N8N
+### N8N Environment Variables
 
 ```bash
 SUPABASE_URL=https://[project].supabase.co
@@ -646,7 +646,7 @@ CLAY_API_KEY=[...]
 BREVO_API_KEY=[...]
 ```
 
-### Variables d'Environnement Scraper
+### Scraper Environment Variables
 
 ```bash
 SUPABASE_URL=https://[project].supabase.co
@@ -656,30 +656,30 @@ SUPABASE_KEY=[anon_key]
 ### Import & Activation
 
 ```
-1. Importer les 6 fichiers JSON dans N8N
-2. Configurer les credentials
-3. Activer dans l'ordre :
+1. Import the 6 JSON files into N8N
+2. Configure credentials
+3. Activate in order :
    WF1 → WF2 → WF3 → WF4 → WF5 → WF6
 ```
 
 ---
 
-## 🚀 Monitoring Pipeline
+## 🚀 Pipeline Monitoring
 
 ```sql
--- Vue temps réel
+-- Real-time overview
 SELECT statut, COUNT(*), ROUND(AVG(score_total), 1)
 FROM amazon_sellers
 GROUP BY statut;
 
--- Top vendeurs qualifiés
+-- Top qualified sellers
 SELECT seller_name, score_total,
        recommandation, angle_approche
 FROM amazon_sellers
 WHERE score_total >= 50
 ORDER BY score_total DESC;
 
--- Suivi séquence email
+-- Email sequence tracking
 SELECT statut, COUNT(*)
 FROM seller_qualification
 GROUP BY statut;
@@ -687,30 +687,30 @@ GROUP BY statut;
 
 ---
 
-## ⚠️ Limites Connues & Points de Fragilité
+## ⚠️ Known Limits & Fragility Points
 
-### Pipeline N8N
-- **Autosave multi-utilisateurs** : conflits si 2 devs éditent simultanément → travailler en solo sur les nodes critiques
-- **Coût GPT-4o** : variable selon longueur HTML généré → prévoir ~0.02€/vendeur pour mise à l'échelle
-- **Rate limit Apollo** : 200 requêtes/jour en plan gratuit → upgrade nécessaire pour volume > 200 vendeurs/jour
-- **Wait nodes Brevo (J+3/J+6)** : N8N Cloud maintient l'exécution active → surveiller les timeouts longs
+### N8N Pipeline
+- **Multi-user autosave** : conflicts if 2 devs edit simultaneously → work solo on critical nodes
+- **GPT-4o cost** : varies based on generated HTML length → budget ~$0.02/seller for scaling
+- **Apollo rate limit** : 200 requests/day on free plan → upgrade required for volume > 200 sellers/day
+- **Brevo wait nodes (D+3/D+6)** : N8N Cloud keeps execution active → monitor long-running timeouts
 
-### Données & Qualité
-- **Scraper Amazon** : dépend du layout HTML → fragile si Amazon modifie sa structure
-- **Enrichissement décideur** : ~70% de taux de succès Apollo → 30% nécessitent fallback manuel
-- **Score IA** : basé sur données Amazon uniquement → ne tient pas compte du catalogue réel Zalando
+### Data & Quality
+- **Amazon scraper** : depends on HTML layout → may break if Amazon updates its structure
+- **Decision-maker enrichment** : ~70% Apollo success rate → 30% require manual fallback
+- **AI score** : based on Amazon data only → does not account for actual Zalando catalog fit
 
 ### Infrastructure
-- **Supabase free tier** : 500 MB storage, 2 GB bandwidth → suffisant pour hackathon, upgrade nécessaire en prod
-- **N8N Cloud** : dépendant de la connexion internet → pas de mode offline
+- **Supabase free tier** : 500 MB storage, 2 GB bandwidth → sufficient for hackathon, upgrade needed in production
+- **N8N Cloud** : requires internet connection → no offline mode
 
 ---
 
 ## 📌 Roadmap
 
-- [ ] Intégration Salesforce native
-- [ ] Dashboard unifié UC2 (Bloc 1 + Bloc 2)
-- [ ] Multi-marketplace (eBay, Cdiscount, Etsy)
-- [ ] Score de confiance IA auto-calibré
-- [ ] Enrichissement LinkedIn décideurs
-- [ ] GMV prédictif par vendeur (IA)
+- [ ] Native Salesforce integration
+- [ ] Unified UC2 dashboard (Block 1 + Block 2)
+- [ ] Multi-marketplace support (eBay, Cdiscount, Etsy)
+- [ ] Self-calibrating AI confidence score
+- [ ] LinkedIn decision-maker enrichment
+- [ ] Predictive GMV per seller (AI)
