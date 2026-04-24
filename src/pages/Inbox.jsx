@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Flame, MessageSquare, ExternalLink, Phone, Trophy, XCircle, Mail, Linkedin, RefreshCw, Copy, Check } from 'lucide-react'
+import { Flame, MessageSquare, ExternalLink, Phone, Trophy, XCircle, Mail, Linkedin, RefreshCw, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LeadDrawer from '../components/LeadDrawer'
 
@@ -21,7 +21,68 @@ function fmt(ts) {
   return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function LeadCard({ lead, onAction, onOpen }) {
+function MessageThread({ messages }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!messages || messages.length === 0) return null
+
+  const sorted = [...messages].sort((a, b) => new Date(b.received_at) - new Date(a.received_at))
+  const latest = sorted[0]
+  const rest = sorted.slice(1)
+
+  return (
+    <div className="mt-3 rounded-lg border border-green-100 bg-green-50/50 overflow-hidden">
+      {/* Latest message */}
+      <div className="px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-green-800">
+              {latest.from_name || latest.from_email}
+            </span>
+            {latest.subject && (
+              <span className="text-xs text-green-700 truncate max-w-[200px]">— {latest.subject}</span>
+            )}
+          </div>
+          <span className="text-xs text-muted flex-shrink-0">{fmt(latest.received_at)}</span>
+        </div>
+        {latest.text_content && (
+          <p className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-3">
+            {latest.text_content.trim()}
+          </p>
+        )}
+      </div>
+
+      {/* Older messages */}
+      {rest.length > 0 && (
+        <>
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="w-full flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100 border-t border-green-100 transition-colors"
+          >
+            {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {expanded ? 'Masquer' : `${rest.length} message${rest.length > 1 ? 's' : ''} précédent${rest.length > 1 ? 's' : ''}`}
+          </button>
+          {expanded && rest.map((msg) => (
+            <div key={msg.id} className="px-3 py-2.5 border-t border-green-100">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-xs font-semibold text-green-800">
+                  {msg.from_name || msg.from_email}
+                </span>
+                <span className="text-xs text-muted">{fmt(msg.received_at)}</span>
+              </div>
+              {msg.text_content && (
+                <p className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-2">
+                  {msg.text_content.trim()}
+                </p>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
+function LeadCard({ lead, tab, onAction, onOpen }) {
   const [actioning, setActioning] = useState(false)
 
   async function handleOutcome(outcome) {
@@ -91,6 +152,11 @@ function LeadCard({ lead, onAction, onOpen }) {
               <span className="text-xs text-muted">J0 : {fmt(lead.seller_sequence.mail1_sent_at)}</span>
             )}
           </div>
+
+          {/* Conversation thread for REPLIED tab */}
+          {tab === 'REPLIED' && (
+            <MessageThread messages={lead.brevo_messages} />
+          )}
         </div>
 
         <div className="text-right flex-shrink-0">
@@ -141,18 +207,32 @@ export default function Inbox() {
 
   async function load(status) {
     setLoading(true)
-    const { data } = await supabase
+    // Try with brevo_messages join; fall back if table doesn't exist yet
+    let data
+    const { data: withMessages, error } = await supabase
       .from('seller_qualification')
-      .select('*, amazon_sellers(seller_name, seller_url, categories), seller_sequence(opened_count, clicked_count, mail1_sent_at, replied)')
+      .select('*, amazon_sellers(seller_name, seller_url, categories), seller_sequence(opened_count, clicked_count, mail1_sent_at, replied), brevo_messages(id, received_at, from_email, from_name, subject, text_content)')
       .eq('statut', status)
       .order('enriched_at', { ascending: false })
+
+    if (error) {
+      // brevo_messages table likely doesn't exist yet — query without it
+      const { data: fallback } = await supabase
+        .from('seller_qualification')
+        .select('*, amazon_sellers(seller_name, seller_url, categories), seller_sequence(opened_count, clicked_count, mail1_sent_at, replied)')
+        .eq('statut', status)
+        .order('enriched_at', { ascending: false })
+      data = fallback
+    } else {
+      data = withMessages
+    }
+
     setLeads(data || [])
     setLoading(false)
   }
 
   useEffect(() => { load(tab) }, [tab])
 
-  /* Realtime refresh on HOT/REPLIED changes */
   useEffect(() => {
     const channel = supabase
       .channel('inbox-realtime')
@@ -181,7 +261,7 @@ export default function Inbox() {
           <div>
             <p className="text-sm font-semibold text-blue-900">C1 Brevo Reply Webhook</p>
             <p className="mt-1 text-xs text-blue-700">
-              Use this URL in Brevo inbound/reply webhook so C1 Inbox can ingest response conversations.
+              Configure cette URL dans Brevo (Inbound Parsing ou Conversations) pour recevoir les réponses ici.
             </p>
             <p className="mt-2 rounded-md bg-white/80 px-2 py-1 font-mono text-xs text-slate-700 break-all">
               {webhookUrl}
@@ -192,7 +272,7 @@ export default function Inbox() {
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#15304e]"
           >
             {copiedWebhook ? <Check size={12} /> : <Copy size={12} />}
-            {copiedWebhook ? 'Copied' : 'Copy URL'}
+            {copiedWebhook ? 'Copié' : 'Copier'}
           </button>
         </div>
       </div>
@@ -213,19 +293,19 @@ export default function Inbox() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-muted">Loading...</div>
+        <div className="flex items-center justify-center h-48 text-muted">Chargement...</div>
       ) : leads.length === 0 ? (
         <div className="card py-16 text-center">
           <div className="text-4xl mb-3">
             {tab === 'HOT' ? '🔥' : '💬'}
           </div>
-          <p className="text-muted">No lead {tab === 'HOT' ? 'HOT' : 'REPLIED'} pour le moment</p>
+          <p className="text-muted">Aucun lead {tab === 'HOT' ? 'HOT' : 'REPLIED'} pour le moment</p>
         </div>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-muted">{leads.length} lead{leads.length > 1 ? 's' : ''}</p>
           {leads.map((lead) => (
-            <LeadCard key={lead.seller_id} lead={lead} onAction={() => load(tab)} onOpen={setSelectedId} />
+            <LeadCard key={lead.seller_id} lead={lead} tab={tab} onAction={() => load(tab)} onOpen={setSelectedId} />
           ))}
         </div>
       )}

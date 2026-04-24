@@ -14,8 +14,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 }
 
+// Brevo inbound parsing:  { items: [{ From: { Address, Name }, Subject, Text, Html }] }
+// Brevo Conversations:    { message: { visitor: { email, name }, value } }
+// Brevo tracking events:  { email, event, ... }
+
 function pickSenderEmail(payload) {
+  // Brevo Inbound Email Parsing
+  const items = payload?.items || payload?.Items
+  if (Array.isArray(items) && items.length > 0) {
+    const from = items[0].From || items[0].from
+    if (from?.Address) return from.Address
+    if (from?.email) return from.email
+    if (typeof from === 'string') {
+      const m = from.match(/<([^>]+)>/)
+      return m ? m[1] : from.trim()
+    }
+  }
+  // Brevo Conversations
+  if (payload?.message?.visitor?.email) return payload.message.visitor.email
   return (
+    payload?.visitor?.email ||
+    payload?.visitorEmail ||
     payload?.from?.email ||
     payload?.sender?.email ||
     payload?.senderEmail ||
@@ -26,25 +45,62 @@ function pickSenderEmail(payload) {
   )
 }
 
-function pickConversationSnippet(payload) {
+function pickFromName(payload) {
+  const items = payload?.items || payload?.Items
+  if (Array.isArray(items) && items.length > 0) {
+    const from = items[0].From || items[0].from
+    if (from?.Name) return from.Name
+    if (typeof from === 'string') {
+      const m = from.match(/^(.+?)\s*</)
+      return m ? m[1].trim() : ''
+    }
+  }
   return (
+    payload?.message?.visitor?.name ||
+    payload?.visitor?.name ||
+    payload?.from?.name ||
+    payload?.senderName ||
+    ''
+  )
+}
+
+function pickSubject(payload) {
+  const items = payload?.items || payload?.Items
+  if (Array.isArray(items) && items.length > 0) {
+    return items[0].Subject || items[0].subject || ''
+  }
+  return payload?.subject || payload?.Subject || payload?.conversation?.subject || ''
+}
+
+function pickTextContent(payload) {
+  const items = payload?.items || payload?.Items
+  if (Array.isArray(items) && items.length > 0) {
+    return items[0].Text || items[0].text || ''
+  }
+  return (
+    payload?.message?.value ||
     payload?.text ||
     payload?.content ||
-    payload?.message ||
-    payload?.html ||
     payload?.data?.text ||
     payload?.data?.content ||
     ''
   )
 }
 
-export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', corsHeaders['Access-Control-Allow-Origin'])
-    res.setHeader('Access-Control-Allow-Methods', corsHeaders['Access-Control-Allow-Methods'])
-    res.setHeader('Access-Control-Allow-Headers', corsHeaders['Access-Control-Allow-Headers'])
-    return res.status(200).end()
+function pickHtmlContent(payload) {
+  const items = payload?.items || payload?.Items
+  if (Array.isArray(items) && items.length > 0) {
+    return items[0].Html || items[0].html || ''
   }
+  return payload?.html || payload?.data?.html || ''
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', corsHeaders['Access-Control-Allow-Origin'])
+  res.setHeader('Access-Control-Allow-Methods', corsHeaders['Access-Control-Allow-Methods'])
+  res.setHeader('Access-Control-Allow-Headers', corsHeaders['Access-Control-Allow-Headers'])
+
+  if (req.method === 'OPTIONS') return res.status(200).end()
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST, OPTIONS')
@@ -61,15 +117,26 @@ export default async function handler(req, res) {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const payload = req.body || {}
+
   const senderEmail = String(pickSenderEmail(payload)).trim().toLowerCase()
+  const fromName = pickFromName(payload)
+  const subject = pickSubject(payload)
+  const textContent = pickTextContent(payload)
+  const htmlContent = pickHtmlContent(payload)
+  const nowIso = new Date().toISOString()
 
   if (!senderEmail) {
-    return res.status(400).json({ ok: false, error: 'No sender email found in payload' })
+    return res.status(400).json({
+      ok: false,
+      error: 'No sender email found in payload',
+      receivedKeys: Object.keys(payload),
+      hint: 'Expected items[0].From.Address (inbound parsing) or message.visitor.email (Conversations)',
+    })
   }
 
   const { data: leadRows, error: leadError } = await supabase
     .from('seller_qualification')
-    .select('seller_id, decision_maker_email')
+    .select('seller_id, decision_maker_email, notes')
     .ilike('decision_maker_email', senderEmail)
     .limit(1)
 
@@ -82,27 +149,40 @@ export default async function handler(req, res) {
   }
 
   const sellerId = leadRows[0].seller_id
-  const snippet = String(pickConversationSnippet(payload)).slice(0, 1200)
-  const nowIso = new Date().toISOString()
+  const existingNotes = leadRows[0].notes || ''
+  const snippet = textContent.slice(0, 1200)
+
+  const noteEntry = [
+    `[${nowIso}] Réponse Brevo${fromName ? ` de ${fromName}` : ''}${subject ? ` — Sujet : ${subject}` : ''}`,
+    snippet || '(aucun contenu texte)',
+  ].join('\n')
+  const updatedNotes = existingNotes ? `${existingNotes}\n\n---\n\n${noteEntry}` : noteEntry
 
   const { error: qualError } = await supabase
     .from('seller_qualification')
-    .update({
-      statut: 'REPLIED',
-      notes: snippet ? `Brevo reply received (${nowIso})\n\n${snippet}` : `Brevo reply received (${nowIso})`,
-    })
+    .update({ statut: 'REPLIED', notes: updatedNotes })
     .eq('seller_id', sellerId)
 
   if (qualError) {
     return res.status(500).json({ ok: false, error: qualError.message, sellerId })
   }
 
+  // Store message in brevo_messages table (run migration first: scripts/migrations/001_create_brevo_messages.sql)
+  const { error: msgError } = await supabase.from('brevo_messages').insert({
+    seller_id: sellerId,
+    received_at: nowIso,
+    from_email: senderEmail,
+    from_name: fromName || null,
+    subject: subject || null,
+    text_content: textContent || null,
+    html_content: htmlContent || null,
+    raw_payload: payload,
+  })
+  const msgInserted = !msgError
+
   const seqUpdate = await supabase
     .from('seller_sequence')
-    .update({
-      replied: true,
-      statut_sequence: 'sequence_en_cours',
-    })
+    .update({ replied: true, statut_sequence: 'sequence_en_cours' })
     .eq('seller_id', sellerId)
     .select('seller_id')
 
@@ -121,12 +201,5 @@ export default async function handler(req, res) {
     }
   }
 
-  res.setHeader('Access-Control-Allow-Origin', corsHeaders['Access-Control-Allow-Origin'])
-  return res.status(200).json({
-    ok: true,
-    matched: true,
-    sellerId,
-    senderEmail,
-  })
+  return res.status(200).json({ ok: true, matched: true, sellerId, senderEmail, msgInserted })
 }
-
