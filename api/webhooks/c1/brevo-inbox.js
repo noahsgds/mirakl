@@ -10,14 +10,15 @@ const SUPABASE_SERVICE_ROLE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dWFyb2ZpZG9nZGpoem9zYm9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2ODUwOTUsImV4cCI6MjA5MjI2MTA5NX0.-b9q5XuR1IgUPcsgGcsXklkU5iPvG65DqRKwd2srhcs'
 
 // ---------------------------------------------------------------------------
-// Brevo Conversations outbound webhook — payload confirmé :
-// {
-//   source: "Conversations",
-//   event_name: "conversation_ended" | "new_message" | …,
-//   messages: [{ type: "visitor"|"agent", from: { email, name }, html, subject }],
-//   identifiers: { email_id },
-//   visitor: { displayedName }
-// }
+// Brevo Conversations outbound webhook — deux formats observés :
+//
+// A) event_name: "conversation_ended"
+//    → event.messages (array) avec html, subject
+//
+// B) event_name: "message_received"
+//    → event.message (objet singulier) sans html ni subject (notification seule)
+//
+// Dans les deux cas : event.identifiers.email_id = email du sender
 // On ne traite que les messages de type "visitor" (réponses des sellers).
 // ---------------------------------------------------------------------------
 
@@ -26,8 +27,12 @@ function stripHtml(html) {
 }
 
 function getVisitorMessage(event) {
-  const msgs = Array.isArray(event?.messages) ? event.messages : []
-  // Prioritise visitor messages (seller replies); fall back to first message if no type info
+  // Normalise: "messages" array (conversation_ended) or "message" singular (message_received)
+  const msgs = Array.isArray(event?.messages)
+    ? event.messages
+    : event?.message
+    ? [event.message]
+    : []
   return msgs.find((m) => m.type === 'visitor') || msgs.find((m) => !m.type) || null
 }
 
