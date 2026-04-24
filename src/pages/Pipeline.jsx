@@ -362,9 +362,10 @@ export default function Pipeline() {
 
     let merged = data || []
 
-    // Fetch sequence metrics (step/open/click/reply) to expose performance at lead level
     if (merged.length > 0) {
       const ids = merged.map((r) => r.seller_id)
+
+      // Sequence metrics
       const { data: seqData } = await supabase
         .from('seller_sequence')
         .select('seller_id, sequence_step, mail_step, statut_sequence, replied, bounced, unsubscribed, opened_count, clicked_count')
@@ -372,6 +373,19 @@ export default function Pipeline() {
       if (seqData) {
         const seqMap = Object.fromEntries(seqData.map((s) => [s.seller_id, s]))
         merged = merged.map((r) => ({ ...r, seq: seqMap[r.seller_id] || null }))
+      }
+
+      // Email generation count (only needed for enriched tab)
+      if (tab === 'enriched') {
+        const { data: emailsData } = await supabase
+          .from('seller_emails')
+          .select('seller_id')
+          .in('seller_id', ids)
+        if (emailsData) {
+          const emailCount = {}
+          for (const e of emailsData) emailCount[e.seller_id] = (emailCount[e.seller_id] || 0) + 1
+          merged = merged.map((r) => ({ ...r, emailCount: emailCount[r.seller_id] || 0 }))
+        }
       }
     }
 
@@ -422,7 +436,8 @@ export default function Pipeline() {
   const isFailed   = tab === 'failed'
   const showScore  = isAScorer || isScored || isFailed
   const showEnrich = isEnriched || isSeq
-  const colCount = 1 + 1 + (showScore ? 3 : 0) + (showEnrich ? (isSeq ? 4 : 3) : 0) + 1 + 1 + 1
+  const colCount = 1 + 1 + (showScore ? 3 : 0) + (showEnrich ? (isSeq ? 4 : 3) : 0) + (isEnriched ? 1 : 0) + 1 + 1 + 1
+  const noEmailsCount = isEnriched ? rows.filter(r => (r.emailCount || 0) === 0).length : 0
 
   return (
     <div className="space-y-6">
@@ -529,6 +544,7 @@ export default function Pipeline() {
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Email</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Titre</th>
                 </>}
+                {isEnriched && <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Emails générés</th>}
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Engagement</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Status</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Actions</th>
@@ -598,6 +614,20 @@ export default function Pipeline() {
                     </td>
                   </>}
 
+                  {isEnriched && (
+                    <td className="px-4 py-2.5">
+                      {r.emailCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 size={11} /> {r.emailCount} email{r.emailCount > 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                          <AlertTriangle size={11} /> Aucun
+                        </span>
+                      )}
+                    </td>
+                  )}
+
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {r.seq ? (
                       <div className="flex items-center gap-1.5">
@@ -664,7 +694,14 @@ export default function Pipeline() {
           <p className="text-xs text-muted">{rows.length} leads shown</p>
           {isAScorer  && <p className="text-xs text-muted">Scraped leads waiting for n8n scoring</p>}
           {isScored   && <p className="text-xs text-muted">Click <strong>Manual</strong> to enrich without Apollo</p>}
-          {isEnriched && <p className="text-xs text-muted">Inline editable fields · <strong className="text-amber-600">⚠ without email generation fails</strong></p>}
+          {isEnriched && (
+            <p className="text-xs text-muted">
+              {noEmailsCount > 0
+                ? <><strong className="text-amber-600">⚠ {noEmailsCount} lead{noEmailsCount > 1 ? 's' : ''} sans emails générés</strong> — relancer le webhook Génération</>
+                : <span className="text-green-600 font-medium">✓ Tous les leads ont des emails générés</span>
+              }
+            </p>
+          )}
           {isFailed   && <p className="text-xs text-muted">Cliquez <strong>Retry</strong> pour remettre en <em>scored</em></p>}
         </div>
       </div>
