@@ -50,9 +50,9 @@ function StatusPill({ status }) {
   const map = {
     pending:   { label: 'En attente',  bg: 'bg-amber-100',  fg: 'text-amber-700',  icon: Clock },
     running:   { label: 'En cours',    bg: 'bg-blue-100',   fg: 'text-blue-700',   icon: Loader2, spin: true },
-    success:   { label: 'Succès',      bg: 'bg-green-100',  fg: 'text-green-700',  icon: CheckCircle2 },
-    error:     { label: 'Erreur',      bg: 'bg-red-100',    fg: 'text-red-700',    icon: XCircle },
-    cancelled: { label: 'Annulé',      bg: 'bg-gray-100',   fg: 'text-gray-600',   icon: XCircle },
+    success:   { label: 'Success',      bg: 'bg-green-100',  fg: 'text-green-700',  icon: CheckCircle2 },
+    error:     { label: 'Error',      bg: 'bg-red-100',    fg: 'text-red-700',    icon: XCircle },
+    cancelled: { label: 'Canceled',      bg: 'bg-gray-100',   fg: 'text-gray-600',   icon: XCircle },
   }
   const s = map[status] || map.pending
   const Icon = s.icon
@@ -337,7 +337,7 @@ export default function Scraping() {
       const statusLabel = active.status === 'running' ? 'en cours' : 'en attente'
       setToast({
         type: 'error',
-        msg: `Un scraping ${cat.label} ${cat.emoji} est déjà ${statusLabel} (créé ${fmtDate(active.created_at)}). Attends qu'il finisse.`,
+        msg: `Un scraping ${cat.label} ${cat.emoji} is already ${statusLabel} (created ${fmtDate(active.created_at)}). Wait until it finishes.`,
       })
       setTimeout(() => setToast(null), 5000)
       return
@@ -357,7 +357,7 @@ export default function Scraping() {
 
     if (checkErr) {
       setLaunching(false)
-      setToast({ type: 'error', msg: `Erreur vérif : ${checkErr.message}` })
+      setToast({ type: 'error', msg: `Verification error: ${checkErr.message}` })
       setTimeout(() => setToast(null), 4000)
       return
     }
@@ -367,7 +367,7 @@ export default function Scraping() {
       const cat = getCategory(pendingConfirm.category)
       setToast({
         type: 'error',
-        msg: `Job ${cat.label} déjà actif — lancement bloqué pour éviter un doublon.`,
+        msg: `Job ${cat.label} already active — launch blocked to avoid duplicates.`,
       })
       setTimeout(() => setToast(null), 5000)
       loadAll()
@@ -382,12 +382,12 @@ export default function Scraping() {
     setLaunching(false)
     setPendingConfirm(null)
     if (error) {
-      setToast({ type: 'error', msg: `Erreur : ${error.message}` })
+      setToast({ type: 'error', msg: `Error: ${error.message}` })
     } else {
       const cat = getCategory(pendingConfirm.category)
       setToast({
         type: 'ok',
-        msg: `Job créé : ${pendingConfirm.target_count} sellers ${cat.label} ${cat.emoji} — le runner va le lancer.`,
+        msg: `Job created: ${pendingConfirm.target_count} sellers ${cat.label} ${cat.emoji} — the runner will launch it.`,
       })
       loadAll()
     }
@@ -403,7 +403,7 @@ export default function Scraping() {
     if (error) {
       setToast({ type: 'error', msg: `Annulation : ${error.message}` })
     } else {
-      setToast({ type: 'ok', msg: 'Job annulé.' })
+      setToast({ type: 'ok', msg: 'Job canceled.' })
       loadAll()
     }
     setTimeout(() => setToast(null), 3000)
@@ -412,7 +412,7 @@ export default function Scraping() {
   function exportSellersCSV() {
     const rows = filteredSellers
     if (rows.length === 0) {
-      setToast({ type: 'error', msg: 'Aucun seller à exporter.' })
+      setToast({ type: 'error', msg: 'No sellers to export.' })
       setTimeout(() => setToast(null), 3000)
       return
     }
@@ -451,7 +451,7 @@ export default function Scraping() {
             <h1 className="text-2xl font-bold text-gray-900">Scraping Amazon FR</h1>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Pipeline de qualification multi-catégories — {sellerStats.total} sellers en base, click sur une catégorie pour drill down.
+            Multi-category qualification pipeline — {sellerStats.total} sellers in database, click a category to drill down.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -460,26 +460,26 @@ export default function Scraping() {
             className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Rafraîchir
+            Refresh
           </button>
         </div>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-4">
-        <Stat icon={Database}  label="Vendeurs en base"   value={sellerStats.total}                         color="#1B3A5C" />
-        <Stat icon={Users}     label="Ajoutés aujourd'hui" value={sellerStats.today}                         color="#2E7D52" />
+        <Stat icon={Database}  label="Sellers en base"   value={sellerStats.total}                         color="#1B3A5C" />
+        <Stat icon={Users}     label="Added today" value={sellerStats.today}                         color="#2E7D52" />
         <Stat icon={Clock}     label="Dernier scrape"     value={fmtDate(sellerStats.lastAt)}               color="#3B82F6" sub="Dernier insert" />
-        <Stat icon={TrendingUp} label="Note moyenne"      value={sellerStats.avgRating ? sellerStats.avgRating.toFixed(2) : '—'} color="#E8445A" sub="sur les sellers notés" />
+        <Stat icon={TrendingUp} label="Average rating"      value={sellerStats.avgRating ? sellerStats.avgRating.toFixed(2) : '—'} color="#E8445A" sub="among rated sellers" />
       </div>
 
-      {/* Catégories — click to drill down */}
+      {/* Categorys — click to drill down */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Sellers par catégorie</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Sellers by category</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Click sur une catégorie pour afficher ses sellers · bouton <Zap size={10} className="inline -mt-0.5" /> pour scraper
+              Click a category to display its sellers · button <Zap size={10} className="inline -mt-0.5" /> pour scraper
             </p>
           </div>
           {activeCategory && (
@@ -545,7 +545,7 @@ export default function Scraping() {
                         requestLaunch({ category: c.key })
                       }
                     }}
-                    title={isBusy ? 'Job déjà actif' : `Scraper ${c.label}`}
+                    title={isBusy ? 'Job already active' : `Scrape ${c.label}`}
                     aria-disabled={launching || isBusy}
                     className={`inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-semibold rounded-md cursor-pointer ${
                       isBusy
@@ -554,7 +554,7 @@ export default function Scraping() {
                     }`}
                   >
                     <Zap size={11} />
-                    Scraper
+                    Scrape
                   </span>
                 </div>
               </button>
@@ -605,7 +605,7 @@ export default function Scraping() {
               <button
                 onClick={clearFilters}
                 className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-                title="Réinitialiser les filtres"
+                title="Reset filters"
               >
                 <X size={15} />
               </button>
@@ -614,7 +614,7 @@ export default function Scraping() {
               onClick={exportSellersCSV}
               disabled={filteredSellers.length === 0}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#1B3A5C] hover:bg-[#16314d] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Export CSV des sellers filtrés"
+              title="Export filtered sellers CSV"
             >
               <Download size={14} />
               Export CSV
@@ -661,7 +661,7 @@ export default function Scraping() {
                   onChange={(e) => setFilters((f) => ({ ...f, ratingMin: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
                 >
-                  <option value="">Toutes</option>
+                  <option value="">All</option>
                   <option value="3.5">≥ 3.5</option>
                   <option value="4.0">≥ 4.0</option>
                   <option value="4.5">≥ 4.5</option>
@@ -696,7 +696,7 @@ export default function Scraping() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Scrapé depuis</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Scraped since</label>
                 <select
                   value={filters.since}
                   onChange={(e) => setFilters((f) => ({ ...f, since: e.target.value }))}
@@ -718,7 +718,7 @@ export default function Scraping() {
                   onChange={(e) => setFilters((f) => ({ ...f, onZalandoOnly: e.target.checked }))}
                   className="rounded border-gray-300 text-[#1B3A5C] focus:ring-[#1B3A5C]/30"
                 />
-                <span>Uniquement déjà sur Zalando</span>
+                <span>Only already on Zalando</span>
               </label>
             </div>
           </div>
@@ -728,24 +728,24 @@ export default function Scraping() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                <SortTh label="Vendeur" sortKey="seller_name" sort={sort} onClick={toggleSort} />
-                <th className="px-4 py-3">Catégorie</th>
+                <SortTh label="Seller" sortKey="seller_name" sort={sort} onClick={toggleSort} />
+                <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Langue</th>
                 <SortTh label="Note" sortKey="rating" sort={sort} onClick={toggleSort} align="right" />
                 <SortTh label="Reviews" sortKey="nb_reviews" sort={sort} onClick={toggleSort} align="right" />
                 <SortTh label="Feedback" sortKey="positive_feedback_pct" sort={sort} onClick={toggleSort} align="right" />
-                <SortTh label="Produits" sortKey="nb_products" sort={sort} onClick={toggleSort} align="right" />
+                <SortTh label="Products" sortKey="nb_products" sort={sort} onClick={toggleSort} align="right" />
                 <SortTh label="Prix moy" sortKey="avg_price" sort={sort} onClick={toggleSort} align="right" />
-                <SortTh label="Scrapé" sortKey="created_at" sort={sort} onClick={toggleSort} />
+                <SortTh label="Scraped" sortKey="created_at" sort={sort} onClick={toggleSort} />
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {sellersLoading ? (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">Chargement…</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">Loading...</td></tr>
               ) : filteredSellers.length === 0 ? (
                 <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">
-                  {search ? 'Aucun seller ne matche la recherche.' : 'Aucun seller pour cette catégorie.'}
+                  {search ? 'No sellers match the search.' : 'No sellers for this category.'}
                 </td></tr>
               ) : (
                 filteredSellers.map((s) => (
@@ -757,7 +757,7 @@ export default function Scraping() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 font-medium text-gray-900 max-w-[220px]">
                         <span className="truncate">{s.seller_name || s.amazon_seller_id || '—'}</span>
-                        {s.on_zalando && <span title="Déjà sur Zalando" className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">Z</span>}
+                        {s.on_zalando && <span title="Already on Zalando" className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">Z</span>}
                       </div>
                       {s.business_name && s.business_name !== s.seller_name && (
                         <p className="text-[11px] text-gray-400 truncate max-w-[220px]">{s.business_name}</p>
@@ -799,13 +799,13 @@ export default function Scraping() {
           Lancer un scraping — {selectedCat.emoji} {selectedCat.label}
         </h2>
         <p className="text-sm text-gray-500 mb-1">
-          Sellers ciblés pour : <strong>{selectedCat.marketplaces.join(', ')}</strong>
+          Target sellers for: <strong>{selectedCat.marketplaces.join(', ')}</strong>
         </p>
         <p className="text-xs text-gray-400 mb-5">{selectedCat.description}</p>
 
         <div className="grid grid-cols-4 gap-4 mb-5">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Catégorie</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Category</label>
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -856,13 +856,13 @@ export default function Scraping() {
           >
             {launching ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="white" />}
             {launching
-              ? 'Création du job…'
+              ? 'Creating job...'
               : activeJobsByCategory[form.category]
-              ? `${selectedCat.label} déjà en cours`
+              ? `${selectedCat.label} already running`
               : `Lancer — ${selectedCat.label}`}
           </button>
           <p className="text-xs text-gray-400">
-            Durée estimée : ~{Math.max(5, Math.round(form.target_count / 8))} min · {form.parallel} worker{form.parallel > 1 ? 's' : ''} parallèle{form.parallel > 1 ? 's' : ''}
+            Estimated duration : ~{Math.max(5, Math.round(form.target_count / 8))} min · {form.parallel} worker{form.parallel > 1 ? 's' : ''} parallel{form.parallel > 1 ? 's' : ''}
           </p>
         </div>
       </div>
@@ -871,11 +871,11 @@ export default function Scraping() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Répartition par langue</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Language distribution</h2>
             <span className="text-[10px] text-gray-400 uppercase tracking-wide">seller Amazon</span>
           </div>
           {langCounts.length === 0 ? (
-            <p className="text-sm text-gray-400">Aucune donnée</p>
+            <p className="text-sm text-gray-400">No data</p>
           ) : (
             <div className="space-y-3">
               {langCounts.map((l) => {
@@ -910,18 +910,18 @@ export default function Scraping() {
             <span className="text-xs text-gray-400">{jobs.length} derniers</span>
           </div>
           {jobs.length === 0 ? (
-            <p className="text-sm text-gray-400">Aucun job pour le moment.</p>
+            <p className="text-sm text-gray-400">No jobs for now.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                    <th className="py-2">Statut</th>
-                    <th className="py-2">Catégorie</th>
-                    <th className="py-2">Créé</th>
+                    <th className="py-2">Status</th>
+                    <th className="py-2">Category</th>
+                    <th className="py-2">Created</th>
                     <th className="py-2">Cible</th>
-                    <th className="py-2">Scrapés</th>
-                    <th className="py-2">Durée</th>
+                    <th className="py-2">Scrapeds</th>
+                    <th className="py-2">Duration</th>
                     <th className="py-2"></th>
                   </tr>
                 </thead>
@@ -943,9 +943,9 @@ export default function Scraping() {
                             <button
                               onClick={() => cancelJob(j.id)}
                               className="text-xs text-gray-400 hover:text-red-600"
-                              title="Annuler"
+                              title="Cancel"
                             >
-                              Annuler
+                              Cancel
                             </button>
                           )}
                         </td>
@@ -995,14 +995,14 @@ export default function Scraping() {
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
-              <Row k="Catégorie" v={<>{getCategory(pendingConfirm.category).emoji} {getCategory(pendingConfirm.category).label}</>} />
+              <Row k="Category" v={<>{getCategory(pendingConfirm.category).emoji} {getCategory(pendingConfirm.category).label}</>} />
               <Row k="Nb sellers cible" v={pendingConfirm.target_count} />
-              <Row k="Workers parallèles" v={pendingConfirm.parallel} />
+              <Row k="Workers parallels" v={pendingConfirm.parallel} />
               <Row k="Skip doublons" v={pendingConfirm.skip_existing ? 'Oui' : 'Non'} />
             </div>
 
             <p className="text-xs text-gray-500 mb-5">
-              Un seul job par catégorie peut tourner à la fois — un double-clic sera bloqué côté serveur.
+              Only one job per category can run at a time — double-click is blocked server-side.
             </p>
 
             <div className="flex gap-2 justify-end">
@@ -1012,7 +1012,7 @@ export default function Scraping() {
                 disabled={launching}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-60"
               >
-                Annuler
+                Cancel
               </button>
               <button
                 type="button"
@@ -1021,7 +1021,7 @@ export default function Scraping() {
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#E8445A] hover:bg-[#d13a4f] rounded-lg disabled:opacity-60"
               >
                 {launching ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="white" />}
-                {launching ? 'Création…' : 'Lancer le scraping'}
+                {launching ? 'Creating...' : 'Start scraping'}
               </button>
             </div>
           </div>
@@ -1074,7 +1074,7 @@ function SellerDrawer({ seller, onClose }) {
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Vendeur Amazon</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Seller Amazon</p>
               <h2 className="text-xl font-bold text-gray-900">{seller.seller_name || seller.amazon_seller_id}</h2>
               {seller.business_name && seller.business_name !== seller.seller_name && (
                 <p className="text-sm text-gray-500 mt-0.5">{seller.business_name}</p>
@@ -1098,9 +1098,9 @@ function SellerDrawer({ seller, onClose }) {
         <div className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-3">
             <MiniStat label="Note" value={seller.rating != null ? Number(seller.rating).toFixed(1) : '—'} icon={Star} />
-            <MiniStat label="Avis" value={seller.nb_reviews ?? '—'} icon={Users} />
+            <MiniStat label="Reviews" value={seller.nb_reviews ?? '—'} icon={Users} />
             <MiniStat label="Feedback +" value={seller.positive_feedback_pct != null ? `${seller.positive_feedback_pct}%` : '—'} icon={CheckCircle2} />
-            <MiniStat label="Produits" value={seller.nb_products ?? '—'} icon={Database} />
+            <MiniStat label="Products" value={seller.nb_products ?? '—'} icon={Database} />
             <MiniStat label="Prix moy" value={fmtEUR(seller.avg_price)} icon={Target} />
             <MiniStat label="Langue" value={seller.seller_language || '—'} icon={Globe2} />
           </div>
@@ -1115,7 +1115,7 @@ function SellerDrawer({ seller, onClose }) {
           {/* Legal / contact info scraped from /sp page */}
           {(seller.scraped_email || seller.scraped_phone || seller.decision_maker_name || seller.decision_maker_email || seller.criteres_detail?.vat_number || seller.criteres_detail?.business_address) && (
             <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-2.5">
-              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Infos légales & contact</p>
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Legal info & contact</p>
               {seller.criteres_detail?.business_type && (
                 <div className="flex items-start justify-between gap-2 text-sm">
                   <span className="text-gray-500 flex-shrink-0">Type</span>
@@ -1139,17 +1139,17 @@ function SellerDrawer({ seller, onClose }) {
                   <span className="text-gray-500 flex-shrink-0">Email</span>
                   <div className="flex items-center gap-1.5">
                     <a href={`mailto:${seller.scraped_email}`} className="font-medium text-blue-700 hover:underline text-xs truncate max-w-[180px]">{seller.scraped_email}</a>
-                    {seller.email_confidence === 'high' && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">vérifié</span>}
+                    {seller.email_confidence === 'high' && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">verified</span>}
                     <button onClick={() => copy(seller.scraped_email)} className="text-gray-400 hover:text-gray-600"><Copy size={11} /></button>
                   </div>
                 </div>
               )}
               {seller.scraped_phone && (
                 <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="text-gray-500 flex-shrink-0">Tél</span>
+                  <span className="text-gray-500 flex-shrink-0">Phone</span>
                   <div className="flex items-center gap-1.5">
                     <span className="font-medium text-gray-900 text-xs">{seller.scraped_phone}</span>
-                    {seller.phone_confidence === 'high' && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">vérifié</span>}
+                    {seller.phone_confidence === 'high' && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">verified</span>}
                     <button onClick={() => copy(seller.scraped_phone)} className="text-gray-400 hover:text-gray-600"><Copy size={11} /></button>
                   </div>
                 </div>
@@ -1168,7 +1168,7 @@ function SellerDrawer({ seller, onClose }) {
               )}
               {seller.decision_maker_phone && (
                 <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="text-gray-500 flex-shrink-0">Tél DM</span>
+                  <span className="text-gray-500 flex-shrink-0">Phone DM</span>
                   <span className="font-medium text-gray-900 text-xs">{seller.decision_maker_phone}</span>
                 </div>
               )}
@@ -1182,7 +1182,7 @@ function SellerDrawer({ seller, onClose }) {
           )}
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Marketplaces cibles Mirakl</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Mirakl target marketplaces</p>
             <div className="flex flex-wrap gap-1.5">
               {cat.marketplaces.map((m) => (
                 <span key={m} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full font-medium">
@@ -1202,7 +1202,7 @@ function SellerDrawer({ seller, onClose }) {
                 <span className="flex-1 truncate">{seller.amazon_seller_id}</span>
                 <Copy size={13} className="text-gray-400" />
               </button>
-              {copied && <p className="text-[10px] text-green-600 mt-1">Copié ✓</p>}
+              {copied && <p className="text-[10px] text-green-600 mt-1">Copied ✓</p>}
             </div>
           )}
 

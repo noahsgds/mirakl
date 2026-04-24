@@ -56,8 +56,8 @@ export default function Errors() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Erreurs pipeline</h1>
-          <p className="text-muted text-sm mt-0.5">{rows.length} leads bloqués</p>
+          <h1 className="text-2xl font-bold text-text">Pipeline errors</h1>
+          <p className="text-muted text-sm mt-0.5">{rows.length} blocked leads</p>
         </div>
         {relaunchable.length > 0 && (
           <button
@@ -65,7 +65,7 @@ export default function Errors() {
             className="flex items-center gap-2 bg-[#1B3A5C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#15304e] transition-colors"
           >
             <RefreshCw size={15} />
-            Relancer tout ({relaunchable.length})
+            Retry all ({relaunchable.length})
           </button>
         )}
       </div>
@@ -87,20 +87,20 @@ export default function Errors() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              {['Vendeur', 'Statut', 'Raison d\'erreur', 'Date', 'Action'].map((h) => (
+              {['Seller', 'Status', 'Raison d\'erreur', 'Date', 'Action'].map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-muted">Chargement...</td></tr>
+              <tr><td colSpan={5} className="px-4 py-12 text-center text-muted">Loading...</td></tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted">
                     <AlertTriangle size={32} className="opacity-30" />
-                    <p>Aucune erreur détectée — pipeline sain !</p>
+                    <p>No errors detected — pipeline healthy!</p>
                   </div>
                 </td>
               </tr>
@@ -146,7 +146,7 @@ export default function Errors() {
                         className="flex items-center gap-1.5 bg-[#1B3A5C] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#15304e] disabled:opacity-50 transition-colors"
                       >
                         <RefreshCw size={12} className={relaunching[r.seller_id] ? 'animate-spin' : ''} />
-                        Relancer
+                        Retry
                       </button>
                     )}
                   </td>

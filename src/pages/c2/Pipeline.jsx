@@ -3,17 +3,17 @@ import { Target, UserCheck, Mail, Send, PlayCircle, ArrowRight, CheckCircle2, Se
 import { useNavigate } from 'react-router-dom'
 
 const STAGE_TABS = [
-  { key: 'a_scorer',  label: 'À scorer',  dot: 'bg-gray-300',   count: 0 },
-  { key: 'scored',    label: 'Scorés',    dot: 'bg-amber-400',  count: 0 },
+  { key: 'a_scorer',  label: 'To score',  dot: 'bg-gray-300',   count: 0 },
+  { key: 'scored',    label: 'Scored',    dot: 'bg-amber-400',  count: 0 },
   { key: 'enriched',  label: 'Enrichis',  dot: 'bg-purple-500', count: 0 },
-  { key: 'sequence',  label: 'Séquence',  dot: 'bg-blue-500',   count: 0 },
-  { key: 'failed',    label: 'Erreurs',   dot: 'bg-red-400',    count: 0 },
+  { key: 'sequence',  label: 'Sequence',  dot: 'bg-blue-500',   count: 0 },
+  { key: 'failed',    label: 'Errors',   dot: 'bg-red-400',    count: 0 },
 ]
 
 const WEBHOOKS = [
   {
-    title: 'Enrichissement',
-    sub: 'Récupère le décideur',
+    title: 'Enrichment',
+    sub: 'Retrieves the decision maker',
     Icon: UserCheck,
     color: '#7C3AED',
     lightBg: 'bg-purple-50',
@@ -22,8 +22,8 @@ const WEBHOOKS = [
     btnBg: 'bg-purple-600',
   },
   {
-    title: 'Génération emails',
-    sub: 'Crée les 3 emails',
+    title: 'Email generation',
+    sub: 'Creates 3 emails',
     Icon: Mail,
     color: '#2563EB',
     lightBg: 'bg-blue-50',
@@ -32,8 +32,8 @@ const WEBHOOKS = [
     btnBg: 'bg-blue-600',
   },
   {
-    title: 'Séquence',
-    sub: 'Envoie J0 / J+3 / J+6',
+    title: 'Sequence',
+    sub: 'Sends D0 / D+3 / D+6',
     Icon: Send,
     color: '#16A34A',
     lightBg: 'bg-green-50',
@@ -56,9 +56,9 @@ export default function C2Pipeline() {
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
               <Target size={14} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-text">Pipeline — Campagne 2</h1>
+            <h1 className="text-2xl font-bold text-text">Pipeline — Campaign 2</h1>
           </div>
-          <p className="text-muted text-sm">Pilotez chaque étape avant de déclencher les workflows</p>
+          <p className="text-muted text-sm">Control each step before triggering workflows</p>
         </div>
       </div>
 
@@ -69,16 +69,16 @@ export default function C2Pipeline() {
             <Settings size={15} className="text-blue-700" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-blue-900 mb-0.5">Configuration requise</p>
+            <p className="text-sm font-semibold text-blue-900 mb-0.5">Configuration required</p>
             <p className="text-sm text-blue-700">
-              Connectez vos tables Supabase et vos webhooks n8n pour activer ce pipeline.
+              Connect your Supabase tables and n8n webhooks to enable this pipeline.
             </p>
           </div>
           <button
             onClick={() => navigate('/c2')}
             className="flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap"
           >
-            Configurer <ArrowRight size={13} />
+            Configure <ArrowRight size={13} />
           </button>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function C2Pipeline() {
               <p className="text-xs text-muted mt-0.5">{wh.sub}</p>
             </div>
             <div className={`w-full flex items-center justify-center gap-2 text-white text-sm py-2 rounded-lg font-medium ${wh.btnBg} opacity-50 cursor-not-allowed`}>
-              <PlayCircle size={14} /> Lancer <ArrowRight size={14} />
+              <PlayCircle size={14} /> Launch <ArrowRight size={14} />
             </div>
           </div>
         ))}
@@ -130,19 +130,19 @@ export default function C2Pipeline() {
           <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
             <Target size={24} className="text-blue-400" />
           </div>
-          <p className="text-sm font-semibold text-text mb-1">Aucun lead dans ce pipeline</p>
+          <p className="text-sm font-semibold text-text mb-1">No leads in this pipeline</p>
           <p className="text-xs text-muted mb-4 max-w-xs mx-auto">
-            Connectez vos sources de données pour commencer à alimenter ce pipeline.
+            Connect your data sources to start feeding this pipeline.
           </p>
 
           {/* Sequence step preview */}
           <div className="max-w-md mx-auto px-6">
-            <p className="text-xs font-semibold text-muted uppercase mb-3">Aperçu des étapes de séquence</p>
+            <p className="text-xs font-semibold text-muted uppercase mb-3">Sequence steps overview</p>
             <div className="flex items-center gap-0 justify-center">
               {[
-                { step: 1, label: 'J0', desc: 'Email initial', color: 'bg-blue-600' },
-                { step: 2, label: 'J+3', desc: 'Relance 1', color: 'bg-purple-600' },
-                { step: 3, label: 'J+6', desc: 'Relance 2', color: 'bg-[#E8445A]' },
+                { step: 1, label: 'D0', desc: 'Initial email', color: 'bg-blue-600' },
+                { step: 2, label: 'D+3', desc: 'Follow-up 1', color: 'bg-purple-600' },
+                { step: 3, label: 'D+6', desc: 'Follow-up 2', color: 'bg-[#E8445A]' },
               ].map((s, i) => (
                 <div key={s.step} className="flex items-center">
                   <div className="flex flex-col items-center">
@@ -162,7 +162,7 @@ export default function C2Pipeline() {
         </div>
 
         <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
-          <p className="text-xs text-muted">0 leads affichés · Pipeline prêt à être configuré</p>
+          <p className="text-xs text-muted">0 leads shown · Pipeline ready to be configured</p>
         </div>
       </div>
     </div>

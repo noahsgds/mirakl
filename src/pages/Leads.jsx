@@ -66,7 +66,7 @@ export default function Leads() {
     setLoading(true)
     let query = supabase
       .from('seller_qualification')
-      .select('seller_id, statut, score_total, recommandation, contexte_detecte, decision_maker_name, decision_maker_title, enriched_at, ab_variant, amazon_sellers!inner(seller_name, seller_url, categories, category, target_marketplaces, present_marketplaces), seller_sequence(sequence_step, statut_sequence)', { count: 'exact' })
+      .select('seller_id, statut, score_total, recommandation, contexte_detecte, decision_maker_name, decision_maker_title, enriched_at, ab_variant, amazon_sellers!inner(seller_name, seller_url, categories, category, target_marketplaces, present_marketplaces), seller_sequence(sequence_step, statut_sequence, opened_count, clicked_count, replied)', { count: 'exact' })
       .order('enriched_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -259,7 +259,7 @@ export default function Leads() {
       {importResult && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm border ${importResult.errors === 0 ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
           <CheckCircle2 size={15} />
-          Import terminé — {importResult.inserted} ligne(s) importée(s){importResult.errors > 0 ? `, ${importResult.errors} erreur(s)` : ''}
+          Import completed — {importResult.inserted} row(s) imported{importResult.errors > 0 ? `, ${importResult.errors} error(s)` : ''}
           <button onClick={() => setImportResult(null)} className="ml-auto"><X size={14} /></button>
         </div>
       )}
@@ -267,13 +267,13 @@ export default function Leads() {
       {showFilters && (
         <div className="card p-4 space-y-4">
           <div>
-            <p className="text-xs font-semibold text-muted uppercase mb-2">Catégorie produit</p>
+            <p className="text-xs font-semibold text-muted uppercase mb-2">Category produit</p>
             <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => { setFilters((f) => ({ ...f, category: '' })); setPage(0) }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${!filters.category ? 'bg-[#1B3A5C] text-white border-[#1B3A5C]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
               >
-                Toutes
+                All
               </button>
               {CATEGORIES.map((c) => (
                 <button
@@ -288,7 +288,7 @@ export default function Leads() {
             </div>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted uppercase mb-2">Statut</p>
+            <p className="text-xs font-semibold text-muted uppercase mb-2">Status</p>
             <div className="flex flex-wrap gap-1.5">
               {STATUS_OPTIONS.map((s) => (
                 <button
@@ -303,9 +303,9 @@ export default function Leads() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Recommandation</label>
+              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Recommendation</label>
               <select className="input w-full" value={filters.recommandation} onChange={(e) => { setFilters((f) => ({ ...f, recommandation: e.target.value })); setPage(0) }}>
-                <option value="">Toutes</option>
+                <option value="">All</option>
                 {RECO_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
@@ -337,7 +337,7 @@ export default function Leads() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['Vendeur', 'Décideur', 'Score', 'Recommandation', 'Catégorie', 'Statut', 'Séquence', 'Variant', 'Date'].map((h) => (
+                {['Seller', 'Decision maker', 'Score', 'Recommendation', 'Category', 'Status', 'Sequence', 'Engagement', 'Variant', 'Date'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide whitespace-nowrap">
                     {h}
                   </th>
@@ -347,11 +347,11 @@ export default function Leads() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted">Chargement...</td>
+                  <td colSpan={10} className="px-4 py-12 text-center text-muted">Loading...</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted">Aucun lead trouvé</td>
+                  <td colSpan={10} className="px-4 py-12 text-center text-muted">No leads found</td>
                 </tr>
               ) : (
                 rows.map((r) => (
@@ -420,6 +420,23 @@ export default function Leads() {
                             {r.seller_sequence.sequence_step}/3
                           </span>
                         )
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {r.seller_sequence ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                            O: {r.seller_sequence.opened_count || 0}
+                          </span>
+                          <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                            C: {r.seller_sequence.clicked_count || 0}
+                          </span>
+                          {r.seller_sequence.replied && (
+                            <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                              Replied
+                            </span>
+                          )}
+                        </div>
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3">

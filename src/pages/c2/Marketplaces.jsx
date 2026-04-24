@@ -32,7 +32,7 @@ export default function C2Marketplaces() {
       if (!stats[id]) stats[id] = { count: 0, highFit: 0, totalScore: 0 }
       stats[id].count++
       stats[id].totalScore += m.compatibility_score ?? 0
-      if ((m.compatibility_score ?? 0) >= 80) stats[id].highFit++
+      if ((m.compatibility_score ?? 0) > 70) stats[id].highFit++
     }
     for (const id in stats) {
       stats[id].avgScore = stats[id].count ? stats[id].totalScore / stats[id].count : 0
@@ -255,7 +255,7 @@ function ComparePanel({ a, b, matches, onClose }) {
             <div className="space-y-1 text-xs">
               <div><span className="text-muted">Avg score:</span> <b>{avg.toFixed(1)}</b></div>
               <div><span className="text-muted">Matches:</span> <b>{stats.length}</b></div>
-              <div><span className="text-muted">High fit:</span> <b>{stats.filter(m => (m.compatibility_score ?? 0) >= 80).length}</b></div>
+              <div><span className="text-muted">High fit:</span> <b>{stats.filter(m => (m.compatibility_score ?? 0) > 70).length}</b></div>
               <div><span className="text-muted">Commission:</span> <b>{mp.commission_rate != null ? `${(mp.commission_rate * 100).toFixed(0)}%` : '—'}</b></div>
               <div><span className="text-muted">Traffic:</span> <b>{mp.monthly_traffic ?? '—'}</b></div>
               <div><span className="text-muted">Categories:</span> <b className="line-clamp-2">{mp.main_categories ?? '—'}</b></div>

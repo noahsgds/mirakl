@@ -10,13 +10,13 @@ import {
 } from 'recharts'
 
 const FUNNEL_ORDER = [
-  { key: 'A_SCORER', label: 'À scorer' },
-  { key: 'scored', label: 'Scorés' },
+  { key: 'A_SCORER', label: 'To score' },
+  { key: 'scored', label: 'Scored' },
   { key: 'enriched', label: 'Enrichis' },
-  { key: 'sequence_en_cours', label: 'En séquence' },
-  { key: 'sequence_terminee', label: 'Terminée' },
+  { key: 'sequence_en_cours', label: 'In sequence' },
+  { key: 'sequence_terminee', label: 'Completed' },
   { key: 'HOT', label: 'HOT' },
-  { key: 'REPLIED', label: 'Réponses' },
+  { key: 'REPLIED', label: 'Replies' },
 ]
 
 const COLORS = ['#94A3B8', '#F59E0B', '#7C3AED', '#3B82F6', '#6B7280', '#E8445A', '#2E7D52']

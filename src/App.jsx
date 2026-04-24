@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import FrontPage from './pages/FrontPage'
 
 // Global
 import GlobalDashboard from './pages/GlobalDashboard'
@@ -29,11 +30,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<FrontPage />} />
         <Route path="/*" element={
           <Layout>
             <Routes>
               {/* Global */}
-              <Route path="/"            element={<GlobalDashboard />} />
+              <Route path="/global"      element={<GlobalDashboard />} />
 
               {/* Campaign 1 */}
               <Route path="/dashboard"   element={<Home />} />
@@ -53,6 +55,7 @@ export default function App() {
               <Route path="/c2/prospects"      element={<C2Prospects />} />
               <Route path="/c2/marketplaces"   element={<C2Marketplaces />} />
               <Route path="/c2/matching"       element={<C2Matching />} />
+              <Route path="/c2/email-generation" element={<C2CampaignFollow />} />
               <Route path="/c2/campagne-email" element={<C2CampaignFollow />} />
               <Route path="/c2/campagne"       element={<C2CampaignParams />} />
             </Routes>

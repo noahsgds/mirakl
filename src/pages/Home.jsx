@@ -65,19 +65,19 @@ export default function Home() {
 
   const kpis = [
     { title: 'Total leads', value: counts._total, icon: Users, color: '#1B3A5C' },
-    { title: 'En séquence', value: counts['sequence_en_cours'], icon: Mail, color: '#3B82F6' },
+    { title: 'In sequence', value: counts['sequence_en_cours'], icon: Mail, color: '#3B82F6' },
     { title: 'HOT leads', value: counts._hot, icon: Flame, color: '#E8445A' },
-    { title: 'Taux de réponse', value: `${counts._replyRate ?? 0}%`, icon: MessageSquare, color: '#2E7D52', sub: `${counts._replied || 0} réponses / ${counts._done || 0} terminées` },
+    { title: 'Reply rate', value: `${counts._replyRate ?? 0}%`, icon: MessageSquare, color: '#2E7D52', sub: `${counts._replied || 0} replies / ${counts._done || 0} completed` },
   ]
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Chargement...</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Loading...</div>
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text">Dashboard</h1>
         <p className="text-muted text-sm mt-1">
-          Amazon FR → 8 catégories × {CATEGORIES.reduce((n, c) => n + c.marketplaces.length, 0)} marketplaces partenaires
+          Amazon FR &rarr; 8 categories &times; {CATEGORIES.reduce((n, c) => n + c.marketplaces.length, 0)} partner marketplaces
         </p>
       </div>
 
@@ -88,7 +88,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Funnel + Activité */}
+      {/* Funnel + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card lg:col-span-2">
           <div className="flex items-center gap-2 mb-4">
@@ -98,21 +98,21 @@ export default function Home() {
           <FunnelChart counts={counts} />
         </div>
 
-        {/* Activité récente */}
+        {/* Recent activity */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Clock size={18} className="text-[#1B3A5C]" />
-            <h2 className="font-semibold text-text">Activité récente</h2>
+            <h2 className="font-semibold text-text">Recent activity</h2>
           </div>
           <div className="space-y-3">
             {recentEnriched.length === 0 && recentEmails.length === 0 && (
-              <p className="text-muted text-sm">Aucune activité récente</p>
+              <p className="text-muted text-sm">No recent activity</p>
             )}
             {recentEnriched.map((r) => (
               <div key={r.seller_id} className="flex items-start gap-2.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-text truncate">Lead enrichi</p>
+                  <p className="text-xs font-medium text-text truncate">Lead enriched</p>
                   <p className="text-xs text-muted">{fmt(r.enriched_at)}</p>
                 </div>
               </div>
@@ -122,7 +122,7 @@ export default function Home() {
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-medium text-text">Email envoyé</p>
+                    <p className="text-xs font-medium text-text">Email sent</p>
                     <StatusBadge status={r.statut_sequence} />
                   </div>
                   <p className="text-xs text-muted">{fmt(r.mail1_sent_at)}</p>
@@ -133,11 +133,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Catégories breakdown */}
+      {/* Categorys breakdown */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <Layers size={18} className="text-[#1B3A5C]" />
-          <h2 className="font-semibold text-text">Sellers par catégorie</h2>
+          <h2 className="font-semibold text-text">Sellers by category</h2>
           <span className="ml-auto text-xs text-muted">
             Total : {Object.values(categoryCounts).reduce((a, b) => a + b, 0)}
           </span>
@@ -156,11 +156,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Statut breakdown */}
+      {/* Status breakdown */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={18} className="text-[#1B3A5C]" />
-          <h2 className="font-semibold text-text">Répartition par statut</h2>
+          <h2 className="font-semibold text-text">Status breakdown</h2>
         </div>
         <div className="flex flex-wrap gap-2">
           {Object.entries(counts)

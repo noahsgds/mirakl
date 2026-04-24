@@ -2,13 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity, RefreshCw, Search, X, CheckCircle2, AlertCircle,
-  Loader2, Rocket, Linkedin, Building2, Clock, Filter, Download,
+  Loader2, Rocket, Linkedin, Building2, Clock, Filter, Download, Mail,
 } from 'lucide-react'
 import { FunnelChart, Funnel, LabelList, Tooltip, ResponsiveContainer } from 'recharts'
-import { supabase } from '../../lib/supabase'
-import { fetchMatches, fetchEmails, fitBandColor, fitBandLabel, sendReadiness } from '../../lib/c2'
-
-const WEBHOOK_URL = 'https://noahsgds.app.n8n.cloud/webhook/lancer-sequence'
+import {
+  fetchMatches,
+  fetchEmails,
+  fitBandColor,
+  fitBandLabel,
+  sendReadiness,
+  saveEmailSelection,
+  markSequenceInProgress,
+} from '../../lib/c2'
 const AUTO_REFRESH = 60_000
 
 const STATUS_TABS = [
@@ -21,12 +26,12 @@ const STATUS_TABS = [
 ]
 
 const PHASES = [
-  { key: 'j0', phase: 1, label: 'J0',  sub: 'First contact',  col: 'selected_variant_j0' },
-  { key: 'j3', phase: 2, label: 'J+3', sub: 'Follow-up 1',    col: 'selected_variant_j3' },
-  { key: 'j6', phase: 3, label: 'J+6', sub: 'Follow-up 2',    col: 'selected_variant_j6' },
+  { key: 'j0', phase: 1, label: 'J0',  sub: 'First contact' },
+  { key: 'j3', phase: 2, label: 'J+3', sub: 'Follow-up 1' },
+  { key: 'j6', phase: 3, label: 'J+6', sub: 'Follow-up 2' },
 ]
 
-function StatutBadge({ statut }) {
+function StatusBadge({ statut }) {
   const m = {
     scored:             { bg: 'bg-blue-50',   text: 'text-blue-700',    label: 'Scored' },
     pending_selection:  { bg: 'bg-amber-50',  text: 'text-amber-700',   label: 'Pending' },
@@ -72,7 +77,7 @@ export default function C2CampaignFollow() {
   async function loadAll() {
     setRefreshing(true)
     const [m, e] = await Promise.all([fetchMatches({ limit: 1000 }), fetchEmails()])
-    setMatches(m.data)
+    setMatches((m.data ?? []).filter(match => Number(match.compatibility_score ?? 0) > 0))
     const map = {}
     for (const row of e.data) map[`${row.seller_id}|${row.marketplace_id}`] = row
     setEmailsMap(map)
@@ -134,8 +139,8 @@ export default function C2CampaignFollow() {
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-text">Campaign Following</h1>
-          <p className="text-sm text-muted mt-0.5">Email sequences · Launch control · Funnel tracking</p>
+          <h1 className="text-2xl font-bold text-text">Email Generation</h1>
+          <p className="text-sm text-muted mt-0.5">Variant selection · Sequence launch · Funnel tracking</p>
         </div>
         <button onClick={loadAll} disabled={refreshing} className="btn-secondary flex items-center gap-2">
           <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
@@ -256,7 +261,7 @@ export default function C2CampaignFollow() {
                             </div>
                           : <span className="text-xs text-gray-400 italic">Not enriched</span>}
                       </td>
-                      <td className="px-4 py-3"><StatutBadge statut={m.statut} /></td>
+                      <td className="px-4 py-3"><StatusBadge statut={m.statut} /></td>
                       <td className="px-4 py-3">
                         {email
                           ? <span className="text-xs text-muted">{variants}/3 variants</span>
@@ -311,12 +316,14 @@ function EmailDrawer({ match, onClose, onEmailUpdate, onLaunched, showToast }) {
   }, [onClose])
 
   async function saveSel(phaseKey, variant) {
-    const col = PHASES.find(p => p.key === phaseKey).col
     setSel(s => ({ ...s, [phaseKey]: variant }))
     setSaving(phaseKey)
-    const { data, error } = await supabase.from('seller_emails_campagne_1')
-      .update({ [col]: variant, updated_at: new Date().toISOString() })
-      .eq('seller_id', match.seller_id).eq('marketplace_id', match.marketplace_id).select().single()
+    const { data, error } = await saveEmailSelection({
+      sellerId: match.seller_id,
+      marketplaceId: match.marketplace_id,
+      phaseKey,
+      variant,
+    })
     setSaving(null)
     if (error) showToast('error', error.message)
     else if (data) onEmailUpdate(data)
@@ -324,11 +331,9 @@ function EmailDrawer({ match, onClose, onEmailUpdate, onLaunched, showToast }) {
 
   async function launch() {
     setLaunching(true)
-    showToast('info', 'Launching sequence…', 0)
+    showToast('info', 'Launching sequence locally…', 0)
     try {
-      const res = await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seller_id: match.seller_id, marketplace_id: match.marketplace_id }) })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      await supabase.from('seller_marketplace_matches').update({ statut: 'sequence_en_cours' }).eq('seller_id', match.seller_id).eq('marketplace_id', match.marketplace_id)
+      await markSequenceInProgress({ sellerId: match.seller_id, marketplaceId: match.marketplace_id })
       onLaunched(match.seller_id, match.marketplace_id)
       onClose()
     } catch (e) {
@@ -349,7 +354,7 @@ function EmailDrawer({ match, onClose, onEmailUpdate, onLaunched, showToast }) {
               <h2 className="text-xl font-bold text-text">{match.seller_name}</h2>
               <span className="text-muted">×</span>
               <span className="font-semibold text-[#2563EB] flex items-center gap-1"><Building2 size={14} /> {match.marketplace_name}</span>
-              <StatutBadge statut={match.statut} />
+              <StatusBadge statut={match.statut} />
             </div>
             {match.decision_maker_name && (
               <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-2">

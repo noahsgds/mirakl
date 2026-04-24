@@ -12,7 +12,7 @@ const CONFIG_DEFAULTS = {
   enrichment_provider: 'apollo',
 }
 
-const SQL_HINT = `-- À exécuter dans Supabase SQL Editor (une seule fois)
+const SQL_HINT = `-- Run in Supabase SQL Editor (one time)
 CREATE TABLE IF NOT EXISTS workflow_config (
   key TEXT PRIMARY KEY,
   value TEXT,
@@ -66,13 +66,13 @@ export default function Campaign() {
 
   const isActive = config.campaign_active === 'true'
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Chargement...</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Loading...</div>
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold text-text">Configuration campagne</h1>
-        <p className="text-muted text-sm mt-0.5">Contrôle du pipeline n8n en temps réel</p>
+        <h1 className="text-2xl font-bold text-text">Campaign configuration</h1>
+        <p className="text-muted text-sm mt-0.5">Real-time n8n pipeline control</p>
       </div>
 
       {tableError && (
@@ -80,12 +80,12 @@ export default function Campaign() {
           <div className="flex items-start gap-3">
             <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-800">Table workflow_config manquante</p>
+              <p className="text-sm font-semibold text-amber-800">Missing workflow_config table</p>
               <p className="text-sm text-amber-700 mt-0.5 mb-3">
-                Créez la table dans Supabase pour activer le contrôle du pipeline.
+                Create the table in Supabase to enable pipeline control.
               </p>
               <button onClick={() => setShowSQL((v) => !v)} className="text-sm font-medium text-amber-800 underline">
-                {showSQL ? 'Masquer' : 'Voir le SQL à exécuter'}
+                {showSQL ? 'Hide' : 'View SQL to run'}
               </button>
               {showSQL && (
                 <pre className="mt-3 bg-amber-100 rounded-lg p-3 text-xs text-amber-900 overflow-x-auto whitespace-pre-wrap">{SQL_HINT}</pre>
@@ -103,9 +103,9 @@ export default function Campaign() {
               <Power size={20} className={isActive ? 'text-green-600' : 'text-red-500'} />
             </div>
             <div>
-              <p className="font-semibold text-text">Campagne {isActive ? 'active' : 'en pause'}</p>
+              <p className="font-semibold text-text">Campaign {isActive ? 'active' : 'paused'}</p>
               <p className="text-sm text-muted">
-                {isActive ? 'Les leads sont traités automatiquement par n8n' : 'Le pipeline est arrêté, aucun email envoyé'}
+                {isActive ? 'Leads are processed automatically by n8n' : 'The pipeline is stopped, no emails sent'}
               </p>
             </div>
           </div>
@@ -119,16 +119,16 @@ export default function Campaign() {
         </div>
       </div>
 
-      {/* Séquence timing */}
+      {/* Sequence timing */}
       <div className="card space-y-5">
         <div className="flex items-center gap-2 mb-1">
           <Clock size={18} className="text-[#1B3A5C]" />
-          <h2 className="font-semibold text-text">Timing de séquence</h2>
+          <h2 className="font-semibold text-text">Sequence timing</h2>
         </div>
 
         {[
-          { key: 'delay_j3', label: 'Délai Mail 2 (jours après J0)', min: 1, max: 14 },
-          { key: 'delay_j6', label: 'Délai Mail 3 (jours après J0)', min: 2, max: 30 },
+          { key: 'delay_j3', label: 'Delay Email 2 (days after J0)', min: 1, max: 14 },
+          { key: 'delay_j6', label: 'Delay Email 3 (days after J0)', min: 2, max: 30 },
         ].map(({ key, label, min, max }) => (
           <div key={key} className="flex items-center justify-between gap-6">
             <div className="flex-1">
@@ -161,7 +161,7 @@ export default function Campaign() {
 
         <div className="flex items-center justify-between gap-6">
           <div className="flex-1">
-            <label className="text-sm font-medium text-text">Leads max traités / jour</label>
+            <label className="text-sm font-medium text-text">Max leads processed / day</label>
             <div className="flex items-center gap-3 mt-2">
               <input
                 type="range"
@@ -173,7 +173,7 @@ export default function Campaign() {
                 className="flex-1 accent-[#1B3A5C]"
               />
               <span className="w-16 text-center font-semibold text-[#1B3A5C] text-sm">
-                {config.max_leads_per_day || 50} / j
+                {config.max_leads_per_day || 50} / day
               </span>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function Campaign() {
 
         <div className="flex items-center justify-between gap-6">
           <div className="flex-1">
-            <label className="text-sm font-medium text-text">Score minimum pour enrichissement</label>
+            <label className="text-sm font-medium text-text">Minimum score for enrichment</label>
             <div className="flex items-center gap-3 mt-2">
               <input
                 type="range"
@@ -202,15 +202,15 @@ export default function Campaign() {
         </div>
       </div>
 
-      {/* Mode A/B */}
+      {/* A/B mode */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={18} className="text-[#1B3A5C]" />
-          <h2 className="font-semibold text-text">Mode de sélection des templates</h2>
+          <h2 className="font-semibold text-text">Template selection mode</h2>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { value: 'ab_test', label: 'A/B Test', desc: 'Alterne entre les templates les moins utilisés' },
+            { value: 'ab_test', label: 'A/B Test', desc: 'Alternates between the least used templates' },
             { value: 'performance', label: 'Performance', desc: 'Utilise toujours le template au meilleur score' },
           ].map(({ value, label, desc }) => (
             <button
@@ -231,11 +231,11 @@ export default function Campaign() {
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <Settings size={18} className="text-[#1B3A5C]" />
-          <h2 className="font-semibold text-text">Fournisseur d'enrichissement</h2>
+          <h2 className="font-semibold text-text">Enrichment provider</h2>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { value: 'apollo', label: 'Apollo.io v1', desc: 'API officielle Apollo — quota limité' },
+            { value: 'apollo', label: 'Apollo.io v1', desc: 'Official Apollo API — limited quota' },
             { value: 'apollo_v2_scrape', label: 'Apollo.io v2 Scrape', desc: 'Scraping Apollo — plus de volume' },
           ].map(({ value, label, desc }) => (
             <button

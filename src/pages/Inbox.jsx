@@ -5,12 +5,12 @@ import LeadDrawer from '../components/LeadDrawer'
 
 const TABS = [
   { key: 'HOT', label: 'HOT leads', icon: Flame, color: '#E8445A', bg: 'bg-red-50', border: 'border-red-200' },
-  { key: 'REPLIED', label: 'Réponses', icon: MessageSquare, color: '#2E7D52', bg: 'bg-green-50', border: 'border-green-200' },
+  { key: 'REPLIED', label: 'Replies', icon: MessageSquare, color: '#2E7D52', bg: 'bg-green-50', border: 'border-green-200' },
 ]
 
 const OUTCOME_OPTIONS = [
-  { value: 'call_planned', label: 'Appel planifié', icon: Phone, color: 'text-blue-600 bg-blue-50 border-blue-200' },
-  { value: 'won', label: 'Gagné', icon: Trophy, color: 'text-green-600 bg-green-50 border-green-200' },
+  { value: 'call_planned', label: 'Call planned', icon: Phone, color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  { value: 'won', label: 'Won', icon: Trophy, color: 'text-green-600 bg-green-50 border-green-200' },
   { value: 'lost', label: 'Perdu', icon: XCircle, color: 'text-red-600 bg-red-50 border-red-200' },
 ]
 
@@ -41,7 +41,7 @@ function LeadCard({ lead, onAction, onOpen }) {
               onClick={() => onOpen(lead.seller_id)}
               className="font-semibold text-text hover:text-[#1B3A5C] hover:underline text-left"
             >
-              {lead.amazon_sellers?.seller_name || 'Vendeur inconnu'}
+              {lead.amazon_sellers?.seller_name || 'Seller inconnu'}
             </button>
             {lead.amazon_sellers?.seller_url && (
               <a href={lead.amazon_sellers.seller_url} target="_blank" rel="noreferrer" className="text-muted hover:text-[#1B3A5C]">
@@ -160,7 +160,7 @@ export default function Inbox() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-text">Inbox</h1>
-        <p className="text-muted text-sm mt-0.5">Leads chauds et réponses à traiter</p>
+        <p className="text-muted text-sm mt-0.5">HOT leads and replies to handle</p>
       </div>
 
       {/* Tabs */}
@@ -179,13 +179,13 @@ export default function Inbox() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-muted">Chargement...</div>
+        <div className="flex items-center justify-center h-48 text-muted">Loading...</div>
       ) : leads.length === 0 ? (
         <div className="card py-16 text-center">
           <div className="text-4xl mb-3">
             {tab === 'HOT' ? '🔥' : '💬'}
           </div>
-          <p className="text-muted">Aucun lead {tab === 'HOT' ? 'HOT' : 'REPLIED'} pour le moment</p>
+          <p className="text-muted">No lead {tab === 'HOT' ? 'HOT' : 'REPLIED'} pour le moment</p>
         </div>
       ) : (
         <div className="space-y-3">

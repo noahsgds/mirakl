@@ -8,13 +8,13 @@ import { supabase } from '../lib/supabase'
 import { CATEGORIES, getCategory } from '../lib/categories'
 
 const FUNNEL_STEPS = [
-  { key: 'A_SCORER', label: 'À scorer', color: '#94A3B8' },
-  { key: 'scored', label: 'Scorés', color: '#F59E0B' },
+  { key: 'A_SCORER', label: 'To score', color: '#94A3B8' },
+  { key: 'scored', label: 'Scored', color: '#F59E0B' },
   { key: 'enriched', label: 'Enrichis', color: '#7C3AED' },
-  { key: 'sequence_en_cours', label: 'En séquence', color: '#3B82F6' },
-  { key: 'sequence_terminee', label: 'Terminée', color: '#6B7280' },
+  { key: 'sequence_en_cours', label: 'In sequence', color: '#3B82F6' },
+  { key: 'sequence_terminee', label: 'Completed', color: '#6B7280' },
   { key: 'HOT', label: 'HOT', color: '#E8445A' },
-  { key: 'REPLIED', label: 'Réponses', color: '#2E7D52' },
+  { key: 'REPLIED', label: 'Replies', color: '#2E7D52' },
 ]
 
 function Section({ icon: Icon, title, children }) {
@@ -103,7 +103,7 @@ export default function Analytics() {
     return { date: dateStr, emails: count }
   })
 
-  /* ---- Recommandation pie ---- */
+  /* ---- Recommendation pie ---- */
   const recoCounts = qualData.reduce((acc, r) => {
     if (!r.recommandation) return acc
     acc[r.recommandation] = (acc[r.recommandation] || 0) + 1
@@ -116,22 +116,41 @@ export default function Analytics() {
   ]
   const totalReco = recoData.reduce((s, r) => s + r.value, 0)
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Chargement...</div>
+  /* ---- Sequence effectiveness ---- */
+  const sentLeads = seqData.filter((r) => !!r.mail1_sent_at).length
+  const openedLeads = seqData.filter((r) => (r.opened_count || 0) > 0).length
+  const clickedLeads = seqData.filter((r) => (r.clicked_count || 0) > 0).length
+  const repliedLeads = seqData.filter((r) => !!r.replied).length
+
+  const openRate = sentLeads > 0 ? Math.round((openedLeads / sentLeads) * 100) : 0
+  const clickRate = sentLeads > 0 ? Math.round((clickedLeads / sentLeads) * 100) : 0
+  const replyRate = sentLeads > 0 ? Math.round((repliedLeads / sentLeads) * 100) : 0
+
+  const sequenceEffectiveness = [
+    { metric: 'Sent', value: sentLeads, color: '#1B3A5C' },
+    { metric: 'Opened', value: openedLeads, color: '#3B82F6' },
+    { metric: 'Clicked', value: clickedLeads, color: '#6366F1' },
+    { metric: 'Replied', value: repliedLeads, color: '#16A34A' },
+  ]
+
+  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Loading...</div>
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text">Analytics</h1>
-        <p className="text-muted text-sm mt-0.5">Vue détaillée des performances de la campagne</p>
+        <p className="text-muted text-sm mt-0.5">Detailed view of campaign performance</p>
       </div>
 
       {/* Top KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {[
           { label: 'Total leads', value: qualData.length },
           { label: 'Score moyen', value: qualData.filter(r => r.score_total).length ? Math.round(qualData.reduce((s, r) => s + (r.score_total || 0), 0) / qualData.filter(r => r.score_total).length) : '—' },
-          { label: 'Taux HOT', value: qualData.length ? `${Math.round((statusCounts['HOT'] || 0) / qualData.length * 100)}%` : '—' },
-          { label: 'Emails envoyés (7j)', value: dailyEmails.reduce((s, d) => s + d.emails, 0) },
+          { label: 'HOT rate', value: qualData.length ? `${Math.round((statusCounts['HOT'] || 0) / qualData.length * 100)}%` : '—' },
+          { label: 'Emails sent (7d)', value: dailyEmails.reduce((s, d) => s + d.emails, 0) },
+          { label: 'Open rate', value: `${openRate}%` },
+          { label: 'Click rate', value: `${clickRate}%` },
         ].map((k) => (
           <div key={k.label} className="card text-center">
             <p className="text-2xl font-bold text-[#1B3A5C]">{k.value}</p>
@@ -139,6 +158,36 @@ export default function Analytics() {
           </div>
         ))}
       </div>
+
+      <Section icon={TrendingUp} title="Email sequence effectiveness">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={sequenceEffectiveness} margin={{ left: 0, right: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="metric" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip formatter={(v) => [v, 'Leads']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {sequenceEffectiveness.map((d, i) => <Cell key={i} fill={d.color} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="space-y-3 text-sm">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+              <p className="font-semibold text-blue-700">Open rate: {openRate}%</p>
+              <p className="text-xs text-blue-600">{openedLeads} opened / {sentLeads} sent</p>
+            </div>
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2">
+              <p className="font-semibold text-indigo-700">Click rate: {clickRate}%</p>
+              <p className="text-xs text-indigo-600">{clickedLeads} clicked / {sentLeads} sent</p>
+            </div>
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+              <p className="font-semibold text-emerald-700">Reply rate: {replyRate}%</p>
+              <p className="text-xs text-emerald-600">{repliedLeads} replied / {sentLeads} sent</p>
+            </div>
+          </div>
+        </div>
+      </Section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Funnel */}
@@ -156,8 +205,8 @@ export default function Analytics() {
           </ResponsiveContainer>
         </Section>
 
-        {/* Recommandation pie */}
-        <Section icon={Target} title="Répartition recommandations IA">
+        {/* Recommendation pie */}
+        <Section icon={Target} title="AI recommendation distribution">
           <div className="flex items-center gap-6">
             <ResponsiveContainer width="50%" height={200}>
               <PieChart>
@@ -196,14 +245,14 @@ export default function Analytics() {
           </BarChart>
         </ResponsiveContainer>
         <div className="flex items-center gap-4 mt-2 justify-center text-xs text-muted">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 inline-block" /> ≥ 70 (qualifié)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block" /> 50-69 (à revoir)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block" /> &lt; 50 (rejeté)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 inline-block" /> ≥ 70 (qualified)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block" /> 50-69 (to review)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block" /> &lt; 50 (rejected)</span>
         </div>
       </Section>
 
       {/* Emails / jour */}
-      <Section icon={BarChart2} title="Emails envoyés — 7 derniers jours">
+      <Section icon={BarChart2} title="Emails sent — last 7 days">
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={dailyEmails} margin={{ left: 0, right: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -215,29 +264,29 @@ export default function Analytics() {
         </ResponsiveContainer>
       </Section>
 
-      {/* Catégories — volume */}
-      <Section icon={Layers} title="Sellers par catégorie (volume)">
+      {/* Categorys — volume */}
+      <Section icon={Layers} title="Sellers by category (volume)">
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={catData} layout="vertical" margin={{ left: 130, right: 40 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
             <XAxis type="number" tick={{ fontSize: 11 }} />
             <YAxis dataKey="cat" type="category" tick={{ fontSize: 11 }} width={130} />
-            <Tooltip formatter={(v, k) => [v, k === 'total' ? 'Total sellers' : 'Déjà sur marketplace']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+            <Tooltip formatter={(v, k) => [v, k === 'total' ? 'Total sellers' : 'Already on marketplace']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="total" fill="#1B3A5C" radius={[0, 4, 4, 0]} name="Total" label={{ position: 'right', fontSize: 11, formatter: (v) => v > 0 ? v : '' }} />
-            <Bar dataKey="present" fill="#2E7D52" radius={[0, 4, 4, 0]} name="Déjà sur marketplace" />
+            <Bar dataKey="present" fill="#2E7D52" radius={[0, 4, 4, 0]} name="Already on marketplace" />
           </BarChart>
         </ResponsiveContainer>
       </Section>
 
-      {/* Catégories — conversion */}
-      <Section icon={Tag} title="Taux de conversion par catégorie (HOT + REPLIED)">
+      {/* Categorys — conversion */}
+      <Section icon={Tag} title="Conversion rate by category (HOT + REPLIED)">
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={catData} layout="vertical" margin={{ left: 130, right: 40 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
             <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
             <YAxis dataKey="cat" type="category" tick={{ fontSize: 11 }} width={130} />
-            <Tooltip formatter={(v) => [`${v}%`, 'Taux conversion']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+            <Tooltip formatter={(v) => [`${v}%`, 'Conversion rate']} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
             <Bar dataKey="taux" fill="#E8445A" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, formatter: (v) => v > 0 ? `${v}%` : '' }} />
           </BarChart>
         </ResponsiveContainer>

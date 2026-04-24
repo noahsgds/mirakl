@@ -1,24 +1,211 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-bg text-text font-sans;
+    @apply font-sans text-foreground;
+    min-height: 100vh;
+    background:
+      radial-gradient(100% 50% at 50% 0%, rgba(0, 163, 255, 0.13) 0, rgba(0, 163, 255, 0) 50%, rgba(0, 163, 255, 0) 100%),
+      linear-gradient(to right, #f0f0f0 1px, transparent 1px),
+      linear-gradient(to bottom, #f0f0f0 1px, transparent 1px),
+      #ffffff;
+    background-size: auto, 6rem 4rem, 6rem 4rem, auto;
+    background-attachment: fixed;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle 800px at 100% 200px, rgba(213, 197, 255, 0.75), transparent);
+  }
+  .theme {
+
+    --font-heading: var(--font-sans);
+
+    --font-sans: 'Geist Variable', sans-serif
+  }
+  :root {
+
+    --background: oklch(1 0 0);
+
+    --foreground: oklch(0.145 0 0);
+
+    --card: oklch(1 0 0);
+
+    --card-foreground: oklch(0.145 0 0);
+
+    --popover: oklch(1 0 0);
+
+    --popover-foreground: oklch(0.145 0 0);
+
+    --primary: oklch(0.205 0 0);
+
+    --primary-foreground: oklch(0.985 0 0);
+
+    --secondary: oklch(0.97 0 0);
+
+    --secondary-foreground: oklch(0.205 0 0);
+
+    --muted: oklch(0.97 0 0);
+
+    --muted-foreground: oklch(0.556 0 0);
+
+    --accent: oklch(0.97 0 0);
+
+    --accent-foreground: oklch(0.205 0 0);
+
+    --destructive: oklch(0.577 0.245 27.325);
+
+    --border: oklch(0.922 0 0);
+
+    --input: oklch(0.922 0 0);
+
+    --ring: oklch(0.708 0 0);
+
+    --chart-1: oklch(0.87 0 0);
+
+    --chart-2: oklch(0.556 0 0);
+
+    --chart-3: oklch(0.439 0 0);
+
+    --chart-4: oklch(0.371 0 0);
+
+    --chart-5: oklch(0.269 0 0);
+
+    --radius: 0.625rem;
+
+    --sidebar: oklch(0.985 0 0);
+
+    --sidebar-foreground: oklch(0.145 0 0);
+
+    --sidebar-primary: oklch(0.205 0 0);
+
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+
+    --sidebar-accent: oklch(0.97 0 0);
+
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+
+    --sidebar-border: oklch(0.922 0 0);
+
+    --sidebar-ring: oklch(0.708 0 0)
+  }
+  .dark {
+
+    --background: oklch(0.145 0 0);
+
+    --foreground: oklch(0.985 0 0);
+
+    --card: oklch(0.205 0 0);
+
+    --card-foreground: oklch(0.985 0 0);
+
+    --popover: oklch(0.205 0 0);
+
+    --popover-foreground: oklch(0.985 0 0);
+
+    --primary: oklch(0.922 0 0);
+
+    --primary-foreground: oklch(0.205 0 0);
+
+    --secondary: oklch(0.269 0 0);
+
+    --secondary-foreground: oklch(0.985 0 0);
+
+    --muted: oklch(0.269 0 0);
+
+    --muted-foreground: oklch(0.708 0 0);
+
+    --accent: oklch(0.269 0 0);
+
+    --accent-foreground: oklch(0.985 0 0);
+
+    --destructive: oklch(0.704 0.191 22.216);
+
+    --border: oklch(1 0 0 / 10%);
+
+    --input: oklch(1 0 0 / 15%);
+
+    --ring: oklch(0.556 0 0);
+
+    --chart-1: oklch(0.87 0 0);
+
+    --chart-2: oklch(0.556 0 0);
+
+    --chart-3: oklch(0.439 0 0);
+
+    --chart-4: oklch(0.371 0 0);
+
+    --chart-5: oklch(0.269 0 0);
+
+    --sidebar: oklch(0.205 0 0);
+
+    --sidebar-foreground: oklch(0.985 0 0);
+
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+
+    --sidebar-accent: oklch(0.269 0 0);
+
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+
+    --sidebar-border: oklch(1 0 0 / 10%);
+
+    --sidebar-ring: oklch(0.556 0 0)
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors;
+    @apply px-4 py-2 rounded-2xl text-sm font-medium text-foreground transition-all duration-300;
+    background: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(6px);
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.08),
+      inset 1px 1px 0 rgba(255, 255, 255, 0.65),
+      inset -1px -1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
   }
   .btn-secondary {
-    @apply bg-white border border-gray-200 text-text px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors;
+    @apply px-4 py-2 rounded-2xl text-sm font-medium text-foreground transition-all duration-300;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(5px);
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.4);
   }
   .card {
-    @apply bg-card rounded-xl shadow-sm border border-gray-100 p-5;
+    @apply rounded-3xl border p-5;
+    border-color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(8px);
+    box-shadow:
+      0 12px 28px rgba(16, 24, 40, 0.1),
+      inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+      inset -1px -1px 0 rgba(255, 255, 255, 0.4);
   }
   .input {
-    @apply border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors;
+    @apply rounded-xl px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent/25;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(4px);
   }
 }

@@ -11,7 +11,7 @@ export default function C2Templates() {
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
               <Target size={14} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-text">Templates — Campagne 2</h1>
+            <h1 className="text-2xl font-bold text-text">Templates — Campaign 2</h1>
           </div>
           <p className="text-muted text-sm">Emails J0 · J+3 · J+6 pour cette campagne</p>
         </div>
@@ -27,8 +27,8 @@ export default function C2Templates() {
         <div className="flex items-start gap-2">
           <Settings size={15} className="text-blue-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-blue-800">
-            Les templates de Campagne 2 peuvent partager la même table <code className="bg-blue-100 px-1 rounded text-xs">email_templates</code> que Campagne 1
-            avec un <code className="bg-blue-100 px-1 rounded text-xs">campaign_name</code> différent.
+            Campaign 2 templates can share the same table <code className="bg-blue-100 px-1 rounded text-xs">email_templates</code> que Campaign 1
+            with a <code className="bg-blue-100 px-1 rounded text-xs">campaign_name</code> different value.
           </p>
         </div>
       </div>
@@ -37,8 +37,8 @@ export default function C2Templates() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { step: 1, label: 'Mail 1 — J0',  desc: 'Premier contact · Pitch principal',   color: 'border-blue-200 bg-blue-50' },
-          { step: 2, label: 'Mail 2 — J+3', desc: 'Relance · Valeur ajoutée',             color: 'border-purple-200 bg-purple-50' },
-          { step: 3, label: 'Mail 3 — J+6', desc: 'Dernière relance · Urgence douce',     color: 'border-pink-200 bg-pink-50' },
+          { step: 2, label: 'Email 2 — D+3', desc: 'Follow-up · Added value',             color: 'border-purple-200 bg-purple-50' },
+          { step: 3, label: 'Email 3 — D+6', desc: 'Final follow-up · Soft urgency',     color: 'border-pink-200 bg-pink-50' },
         ].map(({ step, label, desc, color }) => (
           <div key={step} className={`card border-2 ${color} py-8 text-center`}>
             <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center mx-auto mb-3 font-bold text-text">
@@ -47,7 +47,7 @@ export default function C2Templates() {
             <p className="font-semibold text-text text-sm mb-1">{label}</p>
             <p className="text-xs text-muted mb-4">{desc}</p>
             <button className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 hover:text-blue-900 transition-colors">
-              <Plus size={12} /> Créer un template
+              <Plus size={12} /> Create a template
             </button>
           </div>
         ))}
