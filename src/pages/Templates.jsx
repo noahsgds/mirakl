@@ -46,7 +46,7 @@ function TemplateCard({ template, onSave, onDelete }) {
           <p className="font-semibold text-text">{template.campaign_name || 'Sans nom'}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-xs text-muted">
-              Utilisé <strong>{template.times_used || 0}</strong> fois
+              Used <strong>{template.times_used || 0}</strong> times
             </span>
             {perfScore != null && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${perfColor}`}>
@@ -60,7 +60,7 @@ function TemplateCard({ template, onSave, onDelete }) {
           <button
             onClick={() => setPreview((v) => !v)}
             className={`p-1.5 rounded-lg transition-colors ${preview ? 'bg-[#1B3A5C] text-white' : 'bg-gray-100 text-muted hover:bg-gray-200'}`}
-            title="Prévisualiser"
+            title="Preview"
           >
             {preview ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
@@ -105,7 +105,7 @@ function TemplateCard({ template, onSave, onDelete }) {
               title="Preview"
             />
           ) : (
-            <div className="p-8 text-center text-muted text-sm">Aucun contenu à prévisualiser</div>
+            <div className="p-8 text-center text-muted text-sm">No content to preview</div>
           )}
         </div>
       ) : (
@@ -119,7 +119,7 @@ function TemplateCard({ template, onSave, onDelete }) {
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted">
-          {active ? '✓ Actif dans la rotation' : '— Inactif (exclu de la rotation)'}
+          {active ? '✓ Actif dans la rotation' : '— Inactive (exclu de la rotation)'}
         </p>
         <button
           onClick={handleSave}
@@ -129,7 +129,7 @@ function TemplateCard({ template, onSave, onDelete }) {
           }`}
         >
           {saved ? <Check size={14} /> : saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-          {saved ? 'Sauvegardé !' : saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          {saved ? 'Saved!' : saving ? 'Saving...' : 'Save'}
         </button>
       </div>
     </div>
@@ -168,7 +168,7 @@ function NewTemplateModal({ step, onClose, onCreated }) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="font-semibold text-text">Nouveau template — Mail {form.mail_step}</h3>
+          <h3 className="font-semibold text-text">New template — Mail {form.mail_step}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors">
             <X size={18} className="text-muted" />
           </button>
@@ -177,7 +177,7 @@ function NewTemplateModal({ step, onClose, onCreated }) {
         <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1.5 block">Campagne</label>
+              <label className="text-xs font-semibold text-muted uppercase mb-1.5 block">Campaign</label>
               <input
                 className="input w-full text-sm"
                 value={form.campaign_name}
@@ -185,15 +185,15 @@ function NewTemplateModal({ step, onClose, onCreated }) {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted uppercase mb-1.5 block">Étape mail</label>
+              <label className="text-xs font-semibold text-muted uppercase mb-1.5 block">Email step</label>
               <select
                 className="input w-full text-sm"
                 value={form.mail_step}
                 onChange={(e) => setForm((f) => ({ ...f, mail_step: parseInt(e.target.value) }))}
               >
                 <option value={1}>Mail 1 — J0</option>
-                <option value={2}>Mail 2 — J+3</option>
-                <option value={3}>Mail 3 — J+6</option>
+                <option value={2}>Email 2 — D+3</option>
+                <option value={3}>Email 3 — D+6</option>
               </select>
             </div>
           </div>
@@ -212,7 +212,7 @@ function NewTemplateModal({ step, onClose, onCreated }) {
             <button onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
               className={`flex items-center gap-2 text-sm font-medium transition-colors ${form.is_active ? 'text-green-600' : 'text-muted'}`}>
               {form.is_active ? <ToggleRight size={22} className="text-green-600" /> : <ToggleLeft size={22} />}
-              {form.is_active ? 'Actif dès la création' : 'Inactif'}
+              {form.is_active ? 'Active on creation' : 'Inactive'}
             </button>
           </div>
 
@@ -225,14 +225,14 @@ function NewTemplateModal({ step, onClose, onCreated }) {
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
-          <button onClick={onClose} className="btn-secondary text-sm">Annuler</button>
+          <button onClick={onClose} className="btn-secondary text-sm">Cancel</button>
           <button
             onClick={handleCreate}
             disabled={saving}
             className="flex items-center gap-2 bg-[#1B3A5C] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#15304e] disabled:opacity-50 transition-colors"
           >
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Plus size={14} />}
-            Créer le template
+            Create template
           </button>
         </div>
       </div>
@@ -269,8 +269,8 @@ export default function Templates() {
 
   const tabDef = [
     { step: 1, label: 'Mail 1 — J0' },
-    { step: 2, label: 'Mail 2 — J+3' },
-    { step: 3, label: 'Mail 3 — J+6' },
+    { step: 2, label: 'Email 2 — D+3' },
+    { step: 3, label: 'Email 3 — D+6' },
   ]
 
   return (
@@ -288,7 +288,7 @@ export default function Templates() {
           className="flex items-center gap-2 bg-[#1B3A5C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#15304e] transition-colors"
         >
           <Plus size={15} />
-          Nouveau template
+          New template
         </button>
       </div>
 
@@ -297,8 +297,8 @@ export default function Templates() {
         <div className="flex items-start gap-2">
           <AlertTriangle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
-            Le mode de sélection <strong>A/B Test vs Performance</strong> se configure dans
-            la page <a href="/campagne" className="underline">Campagne</a> · Basculez <code className="bg-amber-100 px-1 rounded text-xs">is_active</code> pour
+            The selection mode <strong>A/B Test vs Performance</strong> is configured in
+            la page <a href="/campagne" className="underline">Campaign</a> · Basculez <code className="bg-amber-100 px-1 rounded text-xs">is_active</code> pour
             inclure ou exclure un template de la rotation.
           </p>
         </div>
@@ -329,16 +329,16 @@ export default function Templates() {
       </div>
 
       {loading ? (
-        <div className="text-center text-muted py-12">Chargement...</div>
+        <div className="text-center text-muted py-12">Loading...</div>
       ) : (byStep[tab] || []).length === 0 ? (
         <div className="card py-16 text-center">
           <FileText size={36} className="mx-auto mb-3 text-gray-300" />
-          <p className="text-muted mb-4">Aucun template pour cette étape</p>
+          <p className="text-muted mb-4">No template for this step</p>
           <button
             onClick={() => setShowNew(true)}
             className="inline-flex items-center gap-2 bg-[#1B3A5C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#15304e] transition-colors"
           >
-            <Plus size={14} /> Créer le premier template
+            <Plus size={14} /> Create first template
           </button>
         </div>
       ) : (

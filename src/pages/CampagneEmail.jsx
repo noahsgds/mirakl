@@ -22,17 +22,17 @@ const AUTO_REFRESH_MS = 60_000
 
 const STATUS_TABS = [
   { key: 'all',               label: 'Tous',             color: 'bg-gray-100 text-gray-700' },
-  { key: 'scored',            label: 'Scorés',           color: 'bg-indigo-50 text-indigo-700' },
-  { key: 'pending_selection', label: 'À valider',        color: 'bg-amber-50 text-amber-700' },
-  { key: 'sequence_en_cours', label: 'Séquence en cours',color: 'bg-blue-50 text-blue-700' },
-  { key: 'sequence_terminee', label: 'Séquence terminée',color: 'bg-green-50 text-green-700' },
-  { key: 'failed',            label: 'Échecs',           color: 'bg-red-50 text-red-700' },
+  { key: 'scored',            label: 'Scored',           color: 'bg-indigo-50 text-indigo-700' },
+  { key: 'pending_selection', label: 'To validate',        color: 'bg-amber-50 text-amber-700' },
+  { key: 'sequence_en_cours', label: 'Sequence en cours',color: 'bg-blue-50 text-blue-700' },
+  { key: 'sequence_terminee', label: 'Sequence completed',color: 'bg-green-50 text-green-700' },
+  { key: 'failed',            label: 'Failures',           color: 'bg-red-50 text-red-700' },
 ]
 
 const PHASES = [
   { key: 'j0', phase: 1, label: 'J0',   sub: 'Premier contact',  column: 'selected_variant_j0' },
-  { key: 'j3', phase: 2, label: 'J+3',  sub: 'Relance 1',        column: 'selected_variant_j3' },
-  { key: 'j6', phase: 3, label: 'J+6',  sub: 'Relance 2',        column: 'selected_variant_j6' },
+  { key: 'j3', phase: 2, label: 'D+3',  sub: 'Follow-up 1',      column: 'selected_variant_j3' },
+  { key: 'j6', phase: 3, label: 'D+6',  sub: 'Follow-up 2',      column: 'selected_variant_j6' },
 ]
 
 function scoreColor(s) {
@@ -42,14 +42,14 @@ function scoreColor(s) {
   return 'bg-red-100 text-red-700'
 }
 
-function StatutBadge({ statut }) {
+function StatusBadge({ statut }) {
   const map = {
-    scored:             { bg: 'bg-indigo-50',  text: 'text-indigo-700',  label: 'Scoré' },
-    pending_selection:  { bg: 'bg-amber-50',   text: 'text-amber-700',   label: 'À valider' },
-    sequence_en_cours:  { bg: 'bg-blue-50',    text: 'text-blue-700',    label: 'Séquence en cours' },
-    sequence_terminee:  { bg: 'bg-green-50',   text: 'text-green-700',   label: 'Terminée' },
-    generation_failed:  { bg: 'bg-red-50',     text: 'text-red-700',     label: 'Génération échouée' },
-    enrichment_failed:  { bg: 'bg-red-50',     text: 'text-red-700',     label: 'Enrichissement échoué' },
+    scored:             { bg: 'bg-indigo-50',  text: 'text-indigo-700',  label: 'Scored' },
+    pending_selection:  { bg: 'bg-amber-50',   text: 'text-amber-700',   label: 'To validate' },
+    sequence_en_cours:  { bg: 'bg-blue-50',    text: 'text-blue-700',    label: 'Sequence en cours' },
+    sequence_terminee:  { bg: 'bg-green-50',   text: 'text-green-700',   label: 'Completed' },
+    generation_failed:  { bg: 'bg-red-50',     text: 'text-red-700',     label: 'Generation failed' },
+    enrichment_failed:  { bg: 'bg-red-50',     text: 'text-red-700',     label: 'Enrichment failed' },
   }
   const m = map[statut] || { bg: 'bg-gray-100', text: 'text-gray-700', label: statut || '—' }
   return (
@@ -78,7 +78,7 @@ function Toast({ toast, onClose }) {
   )
 }
 
-export default function CampagneEmail() {
+export default function CampaignEmail() {
   const [matches, setMatches] = useState([])
   const [emailsBySeller, setEmailsBySeller] = useState({}) // key: seller_id|marketplace_id
   const [loading, setLoading] = useState(true)
@@ -110,7 +110,7 @@ export default function CampagneEmail() {
     ])
 
     if (matchesRes.error) {
-      showToast('error', 'Erreur chargement matches : ' + matchesRes.error.message)
+      showToast('error', 'Error loading matches: ' + matchesRes.error.message)
     } else {
       setMatches(matchesRes.data || [])
     }
@@ -184,10 +184,10 @@ export default function CampagneEmail() {
         <div>
           <h1 className="text-2xl font-bold text-text flex items-center gap-2">
             <Mail size={22} className="text-[#1B3A5C]" />
-            Campagne Email
+            Email Campaign
           </h1>
           <p className="text-muted text-sm mt-0.5">
-            Validation des séquences email générées pour les matchs seller × marketplace
+            Validation of generated email sequences for seller × marketplace matches
           </p>
         </div>
         <button
@@ -202,10 +202,10 @@ export default function CampagneEmail() {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={Sparkles}  label="Matchs scorés"           value={stats.total}                        color="indigo" />
+        <KpiCard icon={Sparkles}  label="Scored matches"           value={stats.total}                        color="indigo" />
         <KpiCard icon={FileText}  label="Score moyen"             value={stats.avgScore.toFixed(1)}           color="blue" />
-        <KpiCard icon={Building2} label="Avec décideur"           value={stats.enriched}                     color="amber" />
-        <KpiCard icon={Mail}      label="Emails générés"          value={stats.withEmails}                   color="green" />
+        <KpiCard icon={Building2} label="With decision maker"           value={stats.enriched}                     color="amber" />
+        <KpiCard icon={Mail}      label="Generated emails"          value={stats.withEmails}                   color="green" />
       </div>
 
       {/* Tabs */}
@@ -239,7 +239,7 @@ export default function CampagneEmail() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher seller, marketplace, décideur, email..."
+              placeholder="Search seller, marketplace, decision maker, email..."
               className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]/20 focus:border-[#1B3A5C]"
             />
           </div>
@@ -266,9 +266,9 @@ export default function CampagneEmail() {
       {/* Table */}
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-muted text-sm">Chargement des matchs...</div>
+          <div className="p-12 text-center text-muted text-sm">Loading matches...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-muted text-sm">Aucun match ne correspond aux filtres.</div>
+          <div className="p-12 text-center text-muted text-sm">No matches fit the filters.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -276,8 +276,8 @@ export default function CampagneEmail() {
                 <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3">Seller × Marketplace</th>
                   <th className="px-4 py-3 text-right">Score</th>
-                  <th className="px-4 py-3">Décideur</th>
-                  <th className="px-4 py-3">Statut</th>
+                  <th className="px-4 py-3">Decision maker</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Emails</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -325,11 +325,11 @@ export default function CampagneEmail() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">Pas enrichi</span>
+                          <span className="text-xs text-gray-400 italic">Not enriched</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <StatutBadge statut={m.statut} />
+                        <StatusBadge statut={m.statut} />
                       </td>
                       <td className="px-4 py-3">
                         {email ? (
@@ -337,7 +337,7 @@ export default function CampagneEmail() {
                             {variantsSelected}/3 variants choisis
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">Pas encore générés</span>
+                          <span className="text-xs text-gray-400 italic">Not generated yet</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -345,7 +345,7 @@ export default function CampagneEmail() {
                           onClick={() => openDrawer(m)}
                           disabled={!email}
                           className="btn-secondary text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={email ? 'Voir les emails' : 'Aucun email généré'}
+                          title={email ? 'Voir les emails' : 'No generated email'}
                         >
                           Voir les emails
                         </button>
@@ -376,7 +376,7 @@ export default function CampagneEmail() {
                   : x
               )
             )
-            showToast('success', '🚀 Séquence lancée ! Les emails seront envoyés via n8n.', 4500)
+            showToast('success', '🚀 Sequence launched! Emails will be sent via n8n.', 4500)
           }}
           showToast={showToast}
         />
@@ -446,7 +446,7 @@ function MatchDrawer({ match, onClose, onEmailUpdate, onSequenceLaunched, showTo
 
     setSavingPhase(null)
     if (error) {
-      showToast('error', `Erreur sauvegarde ${phaseKey.toUpperCase()} : ${error.message}`)
+      showToast('error', `Save error ${phaseKey.toUpperCase()} : ${error.message}`)
     } else if (data) {
       onEmailUpdate(data)
     }
@@ -454,7 +454,7 @@ function MatchDrawer({ match, onClose, onEmailUpdate, onSequenceLaunched, showTo
 
   async function launchSequence() {
     setLaunching(true)
-    showToast('info', 'Lancement de la séquence en cours...', 0)
+    showToast('info', 'Launching sequence...', 0)
     try {
       const res = await fetch(WEBHOOK_URL, {
         method: 'POST',
@@ -475,7 +475,7 @@ function MatchDrawer({ match, onClose, onEmailUpdate, onSequenceLaunched, showTo
       onSequenceLaunched(match.seller_id, match.marketplace_id)
       onClose()
     } catch (e) {
-      showToast('error', `Échec du lancement : ${e.message}`)
+      showToast('error', `Launch failed: ${e.message}`)
     } finally {
       setLaunching(false)
     }
@@ -498,7 +498,7 @@ function MatchDrawer({ match, onClose, onEmailUpdate, onSequenceLaunched, showTo
               <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${scoreColor(match.compatibility_score)}`}>
                 Score {Number(match.compatibility_score || 0).toFixed(1)}
               </span>
-              <StatutBadge statut={match.statut} />
+              <StatusBadge statut={match.statut} />
             </div>
             {match.decision_maker_name && (
               <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-3">
@@ -526,10 +526,10 @@ function MatchDrawer({ match, onClose, onEmailUpdate, onSequenceLaunched, showTo
                   ? 'bg-[#E8445A] text-white hover:bg-[#d03b4f] shadow'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
-              title={!allSelected ? 'Sélectionnez les 3 variants d\'abord' : 'Lancer la séquence email'}
+              title={!allSelected ? 'Select all 3 variants first' : 'Launch email sequence'}
             >
               {launching ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
-              {launching ? 'Envoi...' : 'Lancer la séquence email'}
+              {launching ? 'Sending...' : 'Lancer la email sequence'}
             </button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100">
               <X size={18} />
@@ -553,7 +553,7 @@ function MatchDrawer({ match, onClose, onEmailUpdate, onSequenceLaunched, showTo
         {!email ? (
           <div className="p-12 text-center text-muted">
             <Mail size={36} className="mx-auto mb-3 text-gray-300" />
-            <p>Aucun email n'a encore été généré pour ce match.</p>
+            <p>No emails have been generated for this match yet.</p>
           </div>
         ) : (
           <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -633,13 +633,13 @@ function PhaseCard({ phase, email, selected, saving, onSelect }) {
       <div className="px-4 pt-3">
         <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Objet</div>
         <div className="text-sm text-text font-medium line-clamp-2" title={objet || ''}>
-          {objet || <span className="italic text-gray-400">Aucun objet</span>}
+          {objet || <span className="italic text-gray-400">No objet</span>}
         </div>
       </div>
 
       {/* Preview iframe */}
       <div className="px-4 pt-2 pb-3 flex-1">
-        <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Prévisualisation</div>
+        <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Preview</div>
         <div className="rounded-lg border border-gray-200 bg-white overflow-hidden h-[280px]">
           {html ? (
             <iframe
@@ -668,7 +668,7 @@ function PhaseCard({ phase, email, selected, saving, onSelect }) {
           } disabled:opacity-60`}
         >
           {saving ? (
-            <><Loader2 size={14} className="animate-spin" /> Sauvegarde...</>
+            <><Loader2 size={14} className="animate-spin" /> Saving...</>
           ) : selected === variant ? (
             <><CheckCircle2 size={14} /> Variant "{variant}" choisi</>
           ) : (

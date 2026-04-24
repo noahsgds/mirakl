@@ -13,8 +13,8 @@ import RecoBadge from '../components/RecoBadge'
 const WEBHOOKS = [
   {
     id: 'enrichissement',
-    title: 'Enrichissement',
-    sub: 'Apollo.io — récupère le décideur',
+    title: 'Enrichment',
+    sub: 'Apollo.io — retrieves the decision maker',
     Icon: UserCheck,
     color: '#7C3AED',
     lightBg: 'bg-purple-50',
@@ -25,8 +25,8 @@ const WEBHOOKS = [
   },
   {
     id: 'generation',
-    title: 'Génération emails',
-    sub: 'GPT-4o — crée les 3 emails',
+    title: 'Email generation',
+    sub: 'GPT-4o — creates 3 emails',
     Icon: Mail,
     color: '#1B3A5C',
     lightBg: 'bg-blue-50',
@@ -37,7 +37,7 @@ const WEBHOOKS = [
   },
   {
     id: 'sequence',
-    title: 'Séquence Brevo',
+    title: 'Sequence Brevo',
     sub: 'Envoie J0 / J+3 / J+6',
     Icon: Send,
     color: '#E8445A',
@@ -50,11 +50,11 @@ const WEBHOOKS = [
 ]
 
 const STAGE_TABS = [
-  { key: 'A_SCORER',  label: 'À scorer',  dot: 'bg-gray-400'   },
-  { key: 'scored',    label: 'Scorés',    dot: 'bg-amber-400'  },
+  { key: 'A_SCORER',  label: 'To score',  dot: 'bg-gray-400'   },
+  { key: 'scored',    label: 'Scored',    dot: 'bg-amber-400'  },
   { key: 'enriched',  label: 'Enrichis',  dot: 'bg-purple-500' },
-  { key: 'sequence',  label: 'Séquence',  dot: 'bg-blue-500'   },
-  { key: 'failed',    label: 'Erreurs',   dot: 'bg-red-400'    },
+  { key: 'sequence',  label: 'Sequence',  dot: 'bg-blue-500'   },
+  { key: 'failed',    label: 'Errors',   dot: 'bg-red-400'    },
 ]
 
 const SEQ_STATUTS = ['sequence_en_cours', 'sequence_terminee', 'HOT', 'REPLIED', 'BOUNCE', 'UNSUBSCRIBED']
@@ -103,12 +103,12 @@ function InlineCell({ value, onSave, placeholder, Icon: Ic }) {
   )
 }
 
-/* ─── Statut dropdown ─────────────────────────────────── */
+/* ─── Status dropdown ─────────────────────────────────── */
 const ALL_STATUTS = ['A_SCORER','scored','enriched','sequence_en_cours','sequence_terminee',
   'HOT','REPLIED','BOUNCE','UNSUBSCRIBED','enrichment_failed','enrichment_failed_final',
   'generation_failed','REJETE_FILTRE']
 
-function StatutDropdown({ sellerId, current, onChanged }) {
+function StatusDropdown({ sellerId, current, onChanged }) {
   const [open, setOpen]   = useState(false)
   const [busy, setBusy]   = useState(false)
 
@@ -152,7 +152,7 @@ function StatutDropdown({ sellerId, current, onChanged }) {
 }
 
 /* ─── Bulk statut picker ──────────────────────────────── */
-function BulkStatutPicker({ onChange }) {
+function BulkStatusPicker({ onChange }) {
   const [open, setOpen] = useState(false)
   const QUICK = ['scored','enriched','sequence_en_cours','REJETE_FILTRE']
   return (
@@ -220,7 +220,7 @@ function WebhookCard({ wh, count, onLaunch }) {
       {result && (
         <div className={`rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-xs ${result.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
           {result.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-          {result.ok ? `Lancé · HTTP ${result.status}` : `Erreur : ${result.error || result.status}`}
+          {result.ok ? `Launched · HTTP ${result.status}` : `Error: ${result.error || result.status}`}
         </div>
       )}
 
@@ -228,10 +228,10 @@ function WebhookCard({ wh, count, onLaunch }) {
         <div className="space-y-2">
           <p className="text-xs font-medium text-text">
             Lancer sur <strong>{count}</strong> leads ?
-            {count === 0 && <span className="text-amber-600 ml-1">(0 lead éligible)</span>}
+            {count === 0 && <span className="text-amber-600 ml-1">(0 eligible lead)</span>}
           </p>
           <div className="flex gap-2">
-            <button onClick={() => setConfirm(false)} className="flex-1 btn-secondary text-xs py-1.5">Annuler</button>
+            <button onClick={() => setConfirm(false)} className="flex-1 btn-secondary text-xs py-1.5">Cancel</button>
             <button onClick={launch} disabled={busy}
               className={`flex-1 flex items-center justify-center gap-1.5 text-white text-xs py-1.5 rounded-lg font-medium disabled:opacity-50 ${wh.btnBg}`}>
               {busy ? <RefreshCw size={12} className="animate-spin" /> : <PlayCircle size={12} />}
@@ -285,7 +285,7 @@ function EnrichDrawer({ lead, onClose, onSaved }) {
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div>
-            <h3 className="font-semibold text-text">Enrichissement manuel</h3>
+            <h3 className="font-semibold text-text">Manual enrichment</h3>
             <p className="text-xs text-muted mt-0.5">{lead.seller_id}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-200"><X size={18} className="text-muted" /></button>
@@ -309,12 +309,12 @@ function EnrichDrawer({ lead, onClose, onSaved }) {
             </div>
           )}
           <div className="bg-purple-50 border border-purple-100 rounded-lg px-3 py-2">
-            <p className="text-xs text-purple-700">Le statut passera à <strong>enriched</strong>, source = <strong>manual</strong>.</p>
+            <p className="text-xs text-purple-700">Status will change to <strong>enriched</strong>, source = <strong>manual</strong>.</p>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
-          <button onClick={onClose} className="btn-secondary text-sm">Annuler</button>
+          <button onClick={onClose} className="btn-secondary text-sm">Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50">
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
@@ -362,12 +362,12 @@ export default function Pipeline() {
 
     let merged = data || []
 
-    // For sequence tab, fetch seller_sequence to get the current step
-    if (tab === 'sequence' && merged.length > 0) {
+    // Fetch sequence metrics (step/open/click/reply) to expose performance at lead level
+    if (merged.length > 0) {
       const ids = merged.map((r) => r.seller_id)
       const { data: seqData } = await supabase
         .from('seller_sequence')
-        .select('seller_id, sequence_step, mail_step, statut_sequence, replied, bounced, unsubscribed')
+        .select('seller_id, sequence_step, mail_step, statut_sequence, replied, bounced, unsubscribed, opened_count, clicked_count')
         .in('seller_id', ids)
       if (seqData) {
         const seqMap = Object.fromEntries(seqData.map((s) => [s.seller_id, s]))
@@ -400,7 +400,7 @@ export default function Pipeline() {
     fetchCounts()
   }
 
-  async function bulkChangeStatut(s) {
+  async function bulkChangeStatus(s) {
     const ids = [...selectedIds]
     if (!ids.length) return
     await supabase.from('seller_qualification').update({ statut: s }).in('seller_id', ids)
@@ -422,13 +422,14 @@ export default function Pipeline() {
   const isFailed   = tab === 'failed'
   const showScore  = isAScorer || isScored || isFailed
   const showEnrich = isEnriched || isSeq
+  const colCount = 1 + 1 + (showScore ? 3 : 0) + (showEnrich ? (isSeq ? 4 : 3) : 0) + 1 + 1 + 1
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-text">Pipeline</h1>
-        <p className="text-muted text-sm mt-0.5">Pilotez chaque étape avant de déclencher les workflows n8n</p>
+        <p className="text-muted text-sm mt-0.5">Control each step before triggering n8n workflows</p>
       </div>
 
       {/* Error banner */}
@@ -436,7 +437,7 @@ export default function Pipeline() {
         <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           <AlertTriangle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-red-700">Erreur Supabase</p>
+            <p className="text-sm font-medium text-red-700">Supabase error</p>
             <p className="text-xs text-red-600 font-mono mt-0.5">{queryError}</p>
           </div>
         </div>
@@ -479,7 +480,7 @@ export default function Pipeline() {
           })}
           <div className="ml-auto flex items-center px-4">
             <button onClick={() => { fetchCounts(); loadRows() }}
-              className="p-1.5 rounded-lg hover:bg-gray-200 text-muted" title="Rafraîchir">
+              className="p-1.5 rounded-lg hover:bg-gray-200 text-muted" title="Refresh">
               <RefreshCw size={14} />
             </button>
           </div>
@@ -488,9 +489,9 @@ export default function Pipeline() {
         {/* Bulk bar */}
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-3 px-4 py-2.5 bg-[#1B3A5C]/5 border-b border-[#1B3A5C]/10">
-            <span className="text-sm font-medium text-[#1B3A5C]">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium text-[#1B3A5C]">{selectedIds.size} selected</span>
             <div className="flex items-center gap-2">
-              <BulkStatutPicker onChange={bulkChangeStatut} />
+              <BulkStatusPicker onChange={bulkChangeStatus} />
               <button onClick={bulkReject}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-medium hover:bg-red-100">
                 <XCircle size={13} /> Rejeter
@@ -516,30 +517,31 @@ export default function Pipeline() {
                     }}
                     className="accent-[#1B3A5C]" />
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Vendeur</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Seller</th>
                 {showScore && <>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Score</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Reco</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Contexte</th>
                 </>}
                 {showEnrich && <>
-                  {isSeq && <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Étape</th>}
+                  {isSeq && <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Step</th>}
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Nom</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Email</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Titre</th>
                 </>}
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Statut</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Engagement</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Status</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} className="py-12 text-center text-muted text-sm">Chargement...</td></tr>
+                <tr><td colSpan={colCount} className="py-12 text-center text-muted text-sm">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-16 text-center">
+                  <td colSpan={colCount} className="py-16 text-center">
                     <CheckCircle2 size={32} className="mx-auto mb-2 text-gray-200" />
-                    <p className="text-sm text-muted">Aucun lead à ce stade</p>
+                    <p className="text-sm text-muted">No leads at this stage</p>
                   </td>
                 </tr>
               ) : rows.map((r) => (
@@ -550,7 +552,7 @@ export default function Pipeline() {
                       onChange={() => toggleSelect(r.seller_id)} className="accent-[#1B3A5C]" />
                   </td>
 
-                  {/* Vendeur */}
+                  {/* Seller */}
                   <td className="px-4 py-2.5 max-w-[180px]">
                     <p className="text-xs font-medium text-text truncate">{r.seller_id}</p>
                     {r.error_reason && <p className="text-[10px] text-red-500 truncate">{r.error_reason}</p>}
@@ -576,7 +578,7 @@ export default function Pipeline() {
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-[#1B3A5C]">
                               Mail {r.seq.sequence_step ?? r.seq.mail_step ?? '?'}/3
                             </span>
-                            {r.seq.replied && <span className="text-[10px] text-green-600 font-medium">Répondu</span>}
+                            {r.seq.replied && <span className="text-[10px] text-green-600 font-medium">Replied</span>}
                             {r.seq.bounced && <span className="text-[10px] text-red-500 font-medium">Bounce</span>}
                           </div>
                         ) : <span className="text-gray-400 text-xs">—</span>}
@@ -596,9 +598,27 @@ export default function Pipeline() {
                     </td>
                   </>}
 
-                  {/* Statut */}
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    {r.seq ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                          O: {r.seq.opened_count || 0}
+                        </span>
+                        <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                          C: {r.seq.clicked_count || 0}
+                        </span>
+                        {r.seq.replied && (
+                          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                            Replied
+                          </span>
+                        )}
+                      </div>
+                    ) : <span className="text-gray-400 text-xs">—</span>}
+                  </td>
+
+                  {/* Status */}
                   <td className="px-4 py-2.5">
-                    <StatutDropdown sellerId={r.seller_id} current={r.statut}
+                    <StatusDropdown sellerId={r.seller_id} current={r.statut}
                       onChanged={(s) => patchLocal(r.seller_id, { statut: s })} />
                   </td>
 
@@ -614,13 +634,13 @@ export default function Pipeline() {
                       {isEnriched && !r.decision_maker_email && (
                         <button onClick={() => setEnrichTarget(r)}
                           className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium hover:bg-amber-100 whitespace-nowrap">
-                          <AlertTriangle size={11} /> Compléter
+                          <AlertTriangle size={11} /> Complete
                         </button>
                       )}
                       {isFailed && (
                         <button onClick={() => patchDB(r.seller_id, 'statut', 'scored')}
                           className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium hover:bg-amber-100 whitespace-nowrap">
-                          <RefreshCw size={11} /> Relancer
+                          <RefreshCw size={11} /> Retry
                         </button>
                       )}
                       <button
@@ -641,11 +661,11 @@ export default function Pipeline() {
 
         {/* Footer */}
         <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-          <p className="text-xs text-muted">{rows.length} leads affichés</p>
-          {isAScorer  && <p className="text-xs text-muted">Leads scrappés en attente de scoring n8n</p>}
-          {isScored   && <p className="text-xs text-muted">Cliquez <strong>Manuel</strong> pour enrichir sans Apollo</p>}
-          {isEnriched && <p className="text-xs text-muted">Champs éditables en ligne · <strong className="text-amber-600">⚠ sans email la génération échoue</strong></p>}
-          {isFailed   && <p className="text-xs text-muted">Cliquez <strong>Relancer</strong> pour remettre en <em>scored</em></p>}
+          <p className="text-xs text-muted">{rows.length} leads shown</p>
+          {isAScorer  && <p className="text-xs text-muted">Scraped leads waiting for n8n scoring</p>}
+          {isScored   && <p className="text-xs text-muted">Click <strong>Manual</strong> to enrich without Apollo</p>}
+          {isEnriched && <p className="text-xs text-muted">Inline editable fields · <strong className="text-amber-600">⚠ without email generation fails</strong></p>}
+          {isFailed   && <p className="text-xs text-muted">Cliquez <strong>Retry</strong> pour remettre en <em>scored</em></p>}
         </div>
       </div>
 

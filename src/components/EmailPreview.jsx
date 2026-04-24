@@ -40,7 +40,7 @@ export default function EmailPreview({ emails }) {
             title={`Email ${tabs[tab].label}`}
           />
         ) : (
-          <div className="p-8 text-center text-muted text-sm">Email non généré pour cette étape</div>
+          <div className="p-8 text-center text-muted text-sm">Email not generated for this step</div>
         )}
       </div>
     </div>

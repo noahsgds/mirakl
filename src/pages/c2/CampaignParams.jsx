@@ -3,7 +3,7 @@ import {
   Settings, RefreshCw, Save, CheckCircle2, AlertCircle,
   MessageSquare, Filter, Clock, UserCheck, Target, User, FlaskConical,
 } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { fetchWorkflowConfig, saveWorkflowConfigKey } from '../../lib/c2'
 
 const DEFAULTS = {
   // Copy
@@ -116,14 +116,14 @@ export default function C2CampaignParams() {
 
   async function load() {
     setLoading(true)
-    const { data, error } = await supabase.from('workflow_config_campagne_1').select('*')
-    if (error || !data || data.length === 0) {
+    const { data, error } = await fetchWorkflowConfig()
+    if (error || !data) {
       setTableError(true)
       setConfig(DEFAULTS)
     } else {
       const map = data.reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {})
       setConfig({ ...DEFAULTS, ...map })
-      setTableError(false)
+      setTableError(data.length === 0)
     }
     setLoading(false)
   }
@@ -136,8 +136,7 @@ export default function C2CampaignParams() {
   }
 
   async function saveKey(key) {
-    await supabase.from('workflow_config_campagne_1')
-      .upsert({ key, value: String(config[key]), updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    await saveWorkflowConfigKey({ key, value: String(config[key]) })
     setSavedKey(key)
     setUnsaved(u => { const n = { ...u }; delete n[key]; return n })
     setTimeout(() => setSavedKey(null), 2000)
@@ -156,8 +155,8 @@ export default function C2CampaignParams() {
         <div className="card border border-amber-200 bg-amber-50 flex items-start gap-3">
           <AlertCircle size={17} className="text-amber-600 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-amber-800">Table workflow_config_campagne_1 is empty or missing</p>
-            <p className="text-sm text-amber-700 mt-1">Showing defaults. Changes will attempt to write to Supabase.</p>
+            <p className="text-sm font-semibold text-amber-800">No saved local configuration yet</p>
+            <p className="text-sm text-amber-700 mt-1">Showing defaults. Your saves are stored locally in memory.</p>
           </div>
         </div>
       )}
@@ -222,7 +221,7 @@ export default function C2CampaignParams() {
 
       <div className="flex items-center justify-between">
         <button onClick={load} className="btn-secondary flex items-center gap-2">
-          <RefreshCw size={13} /> Reload from Supabase
+          <RefreshCw size={13} /> Reload local values
         </button>
         <button
           onClick={() => { setConfig(DEFAULTS); setUnsaved({}) }}

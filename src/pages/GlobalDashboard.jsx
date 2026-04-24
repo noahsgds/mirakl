@@ -65,8 +65,8 @@ export default function GlobalDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Vue globale</h1>
-          <p className="text-muted text-sm mt-0.5">Toutes les campagnes · Métriques consolidées</p>
+          <h1 className="text-2xl font-bold text-text">Global view</h1>
+          <p className="text-muted text-sm mt-0.5">All campaigns · Consolidated metrics</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -100,9 +100,9 @@ export default function GlobalDashboard() {
             <div className="grid grid-cols-4 gap-2 mb-5">
               {[
                 { label: 'Total', value: fmt(c1?.total),    color: 'text-white' },
-                { label: 'À scorer', value: fmt(c1?.a_scorer), color: 'text-amber-400' },
+                { label: 'To score', value: fmt(c1?.a_scorer), color: 'text-amber-400' },
                 { label: 'Enrichis', value: fmt(c1?.enriched), color: 'text-purple-400' },
-                { label: 'Séquence', value: fmt(c1?.sequence), color: 'text-blue-400' },
+                { label: 'Sequence', value: fmt(c1?.sequence), color: 'text-blue-400' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="bg-white/5 rounded-lg p-2.5 border border-white/5 text-center">
                   <p className={`text-lg font-bold ${color}`}>{value}</p>
@@ -113,14 +113,14 @@ export default function GlobalDashboard() {
 
             {/* Funnel */}
             <div className="space-y-2 mb-5">
-              <p className="text-white/30 text-[10px] font-semibold uppercase mb-3">Entonnoir pipeline</p>
+              <p className="text-white/30 text-[10px] font-semibold uppercase mb-3">Pipeline funnel</p>
               {c1 && [
-                { label: 'À scorer',  value: c1.a_scorer, color: 'bg-amber-500/70' },
-                { label: 'Scorés',    value: c1.scored,   color: 'bg-orange-500/70' },
+                { label: 'To score',  value: c1.a_scorer, color: 'bg-amber-500/70' },
+                { label: 'Scored',    value: c1.scored,   color: 'bg-orange-500/70' },
                 { label: 'Enrichis',  value: c1.enriched, color: 'bg-purple-500/70' },
-                { label: 'Séquence',  value: c1.sequence, color: 'bg-blue-500/70' },
+                { label: 'Sequence',  value: c1.sequence, color: 'bg-blue-500/70' },
                 { label: 'HOT',       value: c1.hot,      color: 'bg-[#E8445A]/80' },
-                { label: 'Répondus',  value: c1.replied,  color: 'bg-green-500/70' },
+                { label: 'Replied',  value: c1.replied,  color: 'bg-green-500/70' },
               ].map((item) => (
                 <FunnelBar key={item.label} {...item} max={c1.total} />
               ))}
@@ -136,12 +136,12 @@ export default function GlobalDashboard() {
                 )}
                 {c1.replied > 0 && (
                   <span className="flex items-center gap-1 bg-green-500/15 border border-green-500/20 px-2 py-0.5 rounded-full text-[11px] font-medium text-green-400">
-                    <MessageSquare size={10} /> {c1.replied} réponse(s)
+                    <MessageSquare size={10} /> {c1.replied} reply/replies
                   </span>
                 )}
                 {c1.failed > 0 && (
                   <span className="flex items-center gap-1 bg-orange-500/15 border border-orange-500/20 px-2 py-0.5 rounded-full text-[11px] font-medium text-orange-400">
-                    <Activity size={10} /> {c1.failed} erreur(s)
+                    <Activity size={10} /> {c1.failed} error(s)
                   </span>
                 )}
               </div>
@@ -167,8 +167,8 @@ export default function GlobalDashboard() {
                   <Target size={18} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">Campagne 2</p>
-                  <p className="text-white/40 text-xs">Nouveau marché</p>
+                  <p className="text-white font-bold text-sm">Campaign 2</p>
+                  <p className="text-white/40 text-xs">New market</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 bg-blue-500/15 border border-blue-500/20 px-2 py-0.5 rounded-full">
@@ -178,7 +178,7 @@ export default function GlobalDashboard() {
             </div>
 
             <div className="grid grid-cols-4 gap-2 mb-5">
-              {['Total', 'À scorer', 'Enrichis', 'Séquence'].map((label) => (
+              {['Total', 'To score', 'Enrichis', 'Sequence'].map((label) => (
                 <div key={label} className="bg-white/3 rounded-lg p-2.5 border border-white/5 text-center">
                   <p className="text-lg font-bold text-white/20">—</p>
                   <p className="text-white/20 text-[10px] mt-0.5">{label}</p>
@@ -192,9 +192,9 @@ export default function GlobalDashboard() {
               <div className="space-y-2.5">
                 {[
                   { label: 'Connecter les tables Supabase', done: false },
-                  { label: 'Configurer les webhooks n8n', done: false },
-                  { label: 'Créer les templates emails', done: false },
-                  { label: 'Définir les critères de scoring', done: false },
+                  { label: 'Configure n8n webhooks', done: false },
+                  { label: 'Create email templates', done: false },
+                  { label: 'Define scoring criteria', done: false },
                 ].map(({ label, done }) => (
                   <div key={label} className="flex items-center gap-2.5">
                     {done
@@ -212,7 +212,7 @@ export default function GlobalDashboard() {
             onClick={() => navigate('/c2')}
             className="w-full flex items-center justify-between px-6 py-3.5 border-t border-white/8 hover:bg-white/5 transition-colors group"
           >
-            <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors">Configurer Campagne 2</span>
+            <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors">Configure Campaign 2</span>
             <ArrowRight size={15} className="text-white/20 group-hover:text-white/50 group-hover:translate-x-1 transition-all" />
           </button>
         </div>
@@ -222,9 +222,9 @@ export default function GlobalDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total leads (C1)', value: fmt(c1?.total), Icon: Users, color: 'text-[#1B3A5C]', bg: 'bg-slate-50' },
-          { label: 'HOT à traiter (C1)', value: fmt(c1?.hot), Icon: Flame, color: 'text-[#E8445A]', bg: 'bg-red-50' },
-          { label: 'En séquence (C1)', value: fmt(c1?.sequence), Icon: Mail, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Taux réponse (C1)', value: c1 && c1.sequence > 0 ? `${Math.round((c1.replied / c1.sequence) * 100)}%` : '—', Icon: TrendingUp, color: 'text-green-700', bg: 'bg-green-50' },
+          { label: 'HOT to handle (C1)', value: fmt(c1?.hot), Icon: Flame, color: 'text-[#E8445A]', bg: 'bg-red-50' },
+          { label: 'In sequence (C1)', value: fmt(c1?.sequence), Icon: Mail, color: 'text-blue-700', bg: 'bg-blue-50' },
+          { label: 'Reply rate (C1)', value: c1 && c1.sequence > 0 ? `${Math.round((c1.replied / c1.sequence) * 100)}%` : '—', Icon: TrendingUp, color: 'text-green-700', bg: 'bg-green-50' },
         ].map(({ label, value, Icon, color, bg }) => (
           <div key={label} className={`card ${bg} flex items-center gap-3`}>
             <div className={`w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0`}>

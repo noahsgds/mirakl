@@ -15,13 +15,13 @@ const STATUS_STYLES = {
 }
 
 const STATUS_LABELS = {
-  sequence_en_cours: 'En séquence',
-  sequence_terminee: 'Terminée',
-  enrichment_failed: 'Enrichissement échoué',
-  enrichment_failed_final: 'Enrichissement échoué (final)',
-  generation_failed: 'Génération échouée',
-  REJETE_FILTRE: 'Rejeté filtre',
-  A_SCORER: 'À scorer',
+  sequence_en_cours: 'In sequence',
+  sequence_terminee: 'Completed',
+  enrichment_failed: 'Enrichment failed',
+  enrichment_failed_final: 'Enrichment failed (final)',
+  generation_failed: 'Generation failed',
+  REJETE_FILTRE: 'Filter rejected',
+  A_SCORER: 'To score',
 }
 
 export default function StatusBadge({ status }) {

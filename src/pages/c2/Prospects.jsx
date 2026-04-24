@@ -5,8 +5,7 @@ import {
   CheckCircle2, AlertCircle, X, Filter, Download,
   Tag, Globe, Star, Users, Package, Building2, ChevronDown,
 } from 'lucide-react'
-import { fetchSellers, fetchMatches } from '../../lib/c2'
-import { supabase } from '../../lib/supabase'
+import { fetchSellers, fetchMatches, addSellerLocal } from '../../lib/c2'
 
 function enrichmentScore(seller) {
   const fields = [
@@ -37,6 +36,7 @@ const TIER_COLORS = {
 }
 
 export default function C2Prospects() {
+  const PAGE_SIZE = 10
   const [sellers, setSellers]       = useState([])
   const [matchCounts, setMatchCounts] = useState({}) // seller_id → match count
   const [loading, setLoading]       = useState(true)
@@ -44,6 +44,7 @@ export default function C2Prospects() {
   const [selected, setSelected]     = useState(null)
   const [filterTier, setFilterTier] = useState('')
   const [filterCountry, setFilterCountry] = useState('')
+  const [page, setPage]             = useState(1)
   const [showAdd, setShowAdd]       = useState(false)
   const [scraping, setScraping]     = useState(false)
   const [scrapeResult, setScrapeResult] = useState(null)
@@ -81,6 +82,21 @@ export default function C2Prospects() {
     })
   }, [sellers, search, filterTier, filterCountry])
 
+  useEffect(() => {
+    setPage(1)
+  }, [search, filterTier, filterCountry])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page, PAGE_SIZE])
+
   function mockScrape() {
     setScraping(true)
     setScrapeResult(null)
@@ -97,7 +113,7 @@ export default function C2Prospects() {
     setSaving(true)
     const dup = sellers.find(s => s.seller_url?.toLowerCase() === form.seller_url.toLowerCase())
     if (dup) { setFormError(`Domain already exists: "${dup.seller_name}".`); setSaving(false); return }
-    const { error } = await supabase.from('sellers').insert([{
+    const { error } = await addSellerLocal({
       seller_name:    form.seller_name.trim(),
       seller_url:     form.seller_url.trim(),
       categories:     form.categories.trim() || null,
@@ -105,7 +121,7 @@ export default function C2Prospects() {
       brand_tier:     form.brand_tier || null,
       contact_name:   form.contact_name.trim() || null,
       contact_email:  form.contact_email.trim() || null,
-    }])
+    })
     setSaving(false)
     if (error) { setFormError(error.message); return }
     setShowAdd(false)
@@ -213,8 +229,20 @@ export default function C2Prospects() {
           </div>
 
           <div className="card p-0 overflow-hidden">
+            {!loading && filtered.length > 0 && (
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+                  {filtered.length} prospects
+                </span>
+                <span className="text-xs text-muted">
+                  Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)}
+                </span>
+              </div>
+            )}
             {loading ? (
               <div className="p-10 text-center text-muted text-sm">Loading prospects…</div>
+            ) : filtered.length === 0 ? (
+              <div className="p-10 text-center text-muted text-sm">No prospects match this filter.</div>
             ) : (
               <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
                 <table className="w-full text-sm">
@@ -229,7 +257,7 @@ export default function C2Prospects() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.slice(0, 300).map(s => {
+                    {paginated.map(s => {
                       const isSelected = selected?.seller_id === s.seller_id
                       const score = enrichmentScore(s)
                       return (
@@ -261,6 +289,27 @@ export default function C2Prospects() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {!loading && filtered.length > 0 && (
+              <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn-secondary text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-muted">
+                  Page {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="btn-secondary text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>
@@ -380,7 +429,7 @@ export default function C2Prospects() {
                 {[
                   { key: 'seller_name',    label: 'Seller name *',  placeholder: 'Ex: Brand SARL' },
                   { key: 'seller_url',     label: 'Website URL *',  placeholder: 'https://...' },
-                  { key: 'categories',     label: 'Category',       placeholder: 'mode, beauté…' },
+                  { key: 'categories',     label: 'Category',       placeholder: 'fashion, beauty...' },
                   { key: 'country_origin', label: 'Country',        placeholder: 'FR, DE…' },
                   { key: 'contact_name',   label: 'Contact name',   placeholder: 'Jean Dupont' },
                   { key: 'contact_email',  label: 'Contact email',  placeholder: 'j.dupont@…' },

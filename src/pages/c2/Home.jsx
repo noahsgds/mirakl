@@ -7,26 +7,26 @@ import {
 const SETUP_STEPS = [
   {
     id: 'tables',
-    title: 'Connecter les tables Supabase',
-    desc: 'Créez ou mappez vos tables (leads, pipeline, séquences) dans Supabase.',
+    title: 'Connect Supabase tables',
+    desc: 'Create or map your tables (leads, pipeline, sequences) in Supabase.',
     done: false,
   },
   {
     id: 'webhooks',
-    title: 'Configurer les webhooks n8n',
-    desc: 'Branchez vos 3 workflows : enrichissement, génération, séquence.',
+    title: 'Configure n8n webhooks',
+    desc: 'Connect your 3 workflows: enrichment, generation, sequence.',
     done: false,
   },
   {
     id: 'templates',
-    title: 'Créer les templates emails',
-    desc: 'Rédigez vos 3 emails (J0, J+3, J+6) dans l\'onglet Templates.',
+    title: 'Create email templates',
+    desc: 'Write your 3 emails (D0, D+3, D+6) in the Templates tab.',
     done: false,
   },
   {
     id: 'scoring',
-    title: 'Définir les critères de scoring',
-    desc: 'Paramétrez les règles de qualification dans Campagne.',
+    title: 'Define scoring criteria',
+    desc: 'Configure qualification rules in Campaign.',
     done: false,
   },
 ]
@@ -35,7 +35,7 @@ const SHORTCUTS = [
   { label: 'Pipeline',  icon: GitBranch, to: '/c2/pipeline', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-100' },
   { label: 'Leads',     icon: Users,     to: '/c2/leads',    color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-100' },
   { label: 'Templates', icon: FileText,  to: '/c2/templates', color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-100' },
-  { label: 'Campagne',  icon: Settings,  to: '/c2/campagne', color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-100' },
+  { label: 'Campaign',  icon: Settings,  to: '/c2/campagne', color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-100' },
 ]
 
 export default function C2Home() {
@@ -52,21 +52,21 @@ export default function C2Home() {
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
               <Target size={14} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-text">Campagne 2</h1>
+            <h1 className="text-2xl font-bold text-text">Campaign 2</h1>
           </div>
-          <p className="text-muted text-sm">Configurez ce pipeline pour lancer votre deuxième campagne</p>
+          <p className="text-muted text-sm">Configure this pipeline to launch your second campaign</p>
         </div>
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-3 py-1">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-          <span className="text-blue-700 text-xs font-semibold">Setup en cours</span>
+          <span className="text-blue-700 text-xs font-semibold">Setup in progress</span>
         </div>
       </div>
 
       {/* Progress */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-text">Progression de la configuration</p>
-          <span className="text-sm font-bold text-blue-700">{done}/{SETUP_STEPS.length} étapes</span>
+          <p className="text-sm font-semibold text-text">Setup progress</p>
+          <span className="text-sm font-bold text-blue-700">{done}/{SETUP_STEPS.length} steps</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
           <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -93,7 +93,7 @@ export default function C2Home() {
 
       {/* Quick navigation */}
       <div>
-        <p className="text-sm font-semibold text-text mb-3">Sections de cette campagne</p>
+        <p className="text-sm font-semibold text-text mb-3">Campaign sections</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {SHORTCUTS.map(({ label, icon: Icon, to, color, bg, border }) => (
             <button
@@ -117,17 +117,17 @@ export default function C2Home() {
             <Zap size={15} className="text-blue-700" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-blue-900 mb-1">Comment configurer cette campagne ?</p>
+            <p className="text-sm font-semibold text-blue-900 mb-1">How to configure this campaign?</p>
             <p className="text-sm text-blue-700 leading-relaxed">
-              Cette campagne est identique à <strong>Amazon FR</strong> dans sa structure.
-              Elle utilise les mêmes types de tables Supabase et les mêmes workflows n8n.
-              Créez vos tables, connectez vos webhooks, et la campagne sera opérationnelle.
+              This campaign is identical to <strong>Amazon FR</strong> in its structure.
+              It uses the same Supabase table types and n8n workflows.
+              Create your tables, connect your webhooks, and the campaign will be operational.
             </p>
             <button
               onClick={() => navigate('/c2/campagne')}
               className="mt-3 flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 transition-colors"
             >
-              <PlayCircle size={14} /> Commencer la configuration <ArrowRight size={13} />
+              <PlayCircle size={14} /> Start setup <ArrowRight size={13} />
             </button>
           </div>
         </div>

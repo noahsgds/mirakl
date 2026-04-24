@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,jsx}'],
+    darkMode: ['class'],
+    content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
@@ -10,6 +11,10 @@ export default {
         card: '#FFFFFF',
         text: '#1A1A2E',
         muted: '#6B7280',
+        background: '#F8FAFC',
+        foreground: '#1A1A2E',
+        border: '#E5E7EB',
+        ring: 'rgb(156 163 175 / <alpha-value>)',
       },
     },
   },

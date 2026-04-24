@@ -37,7 +37,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [relaunching, setRelaunching] = useState(false)
-  const [newStatut, setNewStatut] = useState('')
+  const [newStatus, setNewStatus] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
@@ -63,7 +63,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
 
       const full = { ...sq, amazon_sellers: seller, seller_sequence: seq }
       setData(full)
-      setNewStatut(sq?.statut || '')
+      setNewStatus(sq?.statut || '')
       setNotes(sq?.notes || '')
       setLoading(false)
     }
@@ -74,7 +74,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
     setRelaunching(true)
     await supabase.from('seller_qualification').update({ statut: 'scored', error_reason: null }).eq('seller_id', sellerId)
     setData((d) => ({ ...d, statut: 'scored', error_reason: null }))
-    setNewStatut('scored')
+    setNewStatus('scored')
     setRelaunching(false)
   }
 
@@ -83,7 +83,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
     setStatusOpen(false)
     await supabase.from('seller_qualification').update({ statut: s }).eq('seller_id', sellerId)
     setData((d) => ({ ...d, statut: s }))
-    setNewStatut(s)
+    setNewStatus(s)
     setChangingStatus(false)
   }
 
@@ -103,16 +103,16 @@ export default function LeadDrawer({ sellerId, onClose }) {
       <div className="relative w-full max-w-2xl bg-white shadow-2xl overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-          <h2 className="font-semibold text-text text-lg">Fiche lead</h2>
+          <h2 className="font-semibold text-text text-lg">Lead profile</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
             <X size={20} className="text-muted" />
           </button>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-muted">Chargement...</div>
+          <div className="flex-1 flex items-center justify-center text-muted">Loading...</div>
         ) : !data ? (
-          <div className="flex-1 flex items-center justify-center text-muted">Lead introuvable</div>
+          <div className="flex-1 flex items-center justify-center text-muted">Lead not found</div>
         ) : (
           <div className="flex-1 p-6 space-y-6">
             {/* 1. En-tête + statut modifiable */}
@@ -120,7 +120,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold text-text">
-                    {data.amazon_sellers?.seller_name || 'Vendeur inconnu'}
+                    {data.amazon_sellers?.seller_name || 'Seller inconnu'}
                   </h3>
                   {data.amazon_sellers?.seller_url && (
                     <a href={data.amazon_sellers.seller_url} target="_blank" rel="noreferrer" className="text-muted hover:text-[#1B3A5C]">
@@ -138,7 +138,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
                 </div>
               </div>
 
-              {/* Statut modifiable */}
+              {/* Status modifiable */}
               <div className="relative">
                 <button
                   onClick={() => setStatusOpen((v) => !v)}
@@ -170,7 +170,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <AlertTriangle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-red-700">Erreur détectée</p>
+                  <p className="text-sm font-medium text-red-700">Error detected</p>
                   <p className="text-sm text-red-600 mt-0.5">{data.error_reason}</p>
                 </div>
                 <button
@@ -179,7 +179,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   className="flex-shrink-0 flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   <RefreshCw size={12} className={relaunching ? 'animate-spin' : ''} />
-                  Relancer
+                  Retry
                 </button>
               </div>
             )}
@@ -218,9 +218,9 @@ export default function LeadDrawer({ sellerId, onClose }) {
               )}
             </div>
 
-            {/* 3. Décideur */}
+            {/* 3. Decision maker */}
             <div className="card">
-              <h4 className="text-sm font-semibold text-text mb-3">Contact décideur</h4>
+              <h4 className="text-sm font-semibold text-text mb-3">Decision maker contact</h4>
               {data.decision_maker_name ? (
                 <div className="space-y-2">
                   <div>
@@ -244,17 +244,17 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted">Décideur non encore enrichi</p>
+                <p className="text-sm text-muted">Decision maker non encore enrichi</p>
               )}
             </div>
 
             {/* 4. Notes */}
             <div className="card">
-              <h4 className="text-sm font-semibold text-text mb-3">Notes internes</h4>
+              <h4 className="text-sm font-semibold text-text mb-3">Internal notes</h4>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ajouter une note sur ce lead (appel prévu, contexte, objections...)"
+                placeholder="Add a note on this lead (planned call, context, objections...)"
                 className="input w-full min-h-[100px] resize-y text-sm"
               />
               <div className="flex justify-end mt-2">
@@ -264,23 +264,23 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${notesSaved ? 'bg-green-600 text-white' : 'bg-[#1B3A5C] text-white hover:bg-[#15304e]'} disabled:opacity-50`}
                 >
                   {notesSaved ? <CheckCircle2 size={12} /> : <Save size={12} />}
-                  {notesSaved ? 'Sauvegardé !' : savingNotes ? 'Sauvegarde...' : 'Sauvegarder'}
+                  {notesSaved ? 'Saved!' : savingNotes ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
 
-            {/* 5. Emails générés */}
+            {/* 5. Generated emails */}
             {data.seller_emails && (
               <div className="card">
-                <h4 className="text-sm font-semibold text-text mb-3">Emails générés</h4>
+                <h4 className="text-sm font-semibold text-text mb-3">Generated emails</h4>
                 <EmailPreview emails={data.seller_emails} />
               </div>
             )}
 
-            {/* 6. Timeline séquence */}
+            {/* 6. Sequence timeline */}
             {data.seller_sequence && (
               <div className="card">
-                <h4 className="text-sm font-semibold text-text mb-3">Timeline séquence</h4>
+                <h4 className="text-sm font-semibold text-text mb-3">Sequence timeline</h4>
                 <div className="space-y-2">
                   {[
                     { label: 'J0', date: data.seller_sequence.mail1_sent_at },
@@ -299,9 +299,9 @@ export default function LeadDrawer({ sellerId, onClose }) {
                 <div className="mt-3 flex flex-wrap gap-2">
                   {data.seller_sequence.opened_count > 0 && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{data.seller_sequence.opened_count} ouverture(s)</span>}
                   {data.seller_sequence.clicked_count > 0 && <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">{data.seller_sequence.clicked_count} clic(s)</span>}
-                  {data.seller_sequence.replied && <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">Répondu</span>}
+                  {data.seller_sequence.replied && <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">Replied</span>}
                   {data.seller_sequence.bounced && <span className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">Bounced</span>}
-                  {data.seller_sequence.unsubscribed && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Désabonné</span>}
+                  {data.seller_sequence.unsubscribed && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Unsubscribed</span>}
                 </div>
               </div>
             )}
@@ -315,7 +315,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   <div>
                     <div className="flex items-center gap-1.5 mb-2">
                       <Target size={13} className="text-[#E8445A]" />
-                      <p className="text-xs font-semibold text-muted uppercase">Cibles Mirakl ({data.amazon_sellers.target_marketplaces.length})</p>
+                      <p className="text-xs font-semibold text-muted uppercase">Mirakl targets ({data.amazon_sellers.target_marketplaces.length})</p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {data.amazon_sellers.target_marketplaces.map((m) => (
@@ -331,7 +331,7 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   <div>
                     <div className="flex items-center gap-1.5 mb-2">
                       <ShoppingBag size={13} className="text-green-600" />
-                      <p className="text-xs font-semibold text-muted uppercase">Déjà présent sur ({data.amazon_sellers.present_marketplaces.length})</p>
+                      <p className="text-xs font-semibold text-muted uppercase">Already present on ({data.amazon_sellers.present_marketplaces.length})</p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {data.amazon_sellers.present_marketplaces.map((m) => (
@@ -345,10 +345,10 @@ export default function LeadDrawer({ sellerId, onClose }) {
               </div>
             )}
 
-            {/* 8. Données Amazon */}
+            {/* 8. Amazon data */}
             {data.amazon_sellers && (
               <div className="card">
-                <h4 className="text-sm font-semibold text-text mb-3">Données Amazon</h4>
+                <h4 className="text-sm font-semibold text-text mb-3">Amazon data</h4>
                 {data.amazon_sellers.category && (() => {
                   const cat = getCategory(data.amazon_sellers.category)
                   return (
@@ -361,9 +361,9 @@ export default function LeadDrawer({ sellerId, onClose }) {
                   )
                 })()}
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted">Produits</span><p className="font-medium">{data.amazon_sellers.nb_products?.toLocaleString() || '—'}</p></div>
-                  <div><span className="text-muted">Avis</span><p className="font-medium">{data.amazon_sellers.nb_reviews?.toLocaleString() || '—'}</p></div>
-                  <div><span className="text-muted">Prix moyen</span><p className="font-medium">{data.amazon_sellers.avg_price ? `${data.amazon_sellers.avg_price.toFixed(2)} €` : '—'}</p></div>
+                  <div><span className="text-muted">Products</span><p className="font-medium">{data.amazon_sellers.nb_products?.toLocaleString() || '—'}</p></div>
+                  <div><span className="text-muted">Reviews</span><p className="font-medium">{data.amazon_sellers.nb_reviews?.toLocaleString() || '—'}</p></div>
+                  <div><span className="text-muted">Average price</span><p className="font-medium">{data.amazon_sellers.avg_price ? `${data.amazon_sellers.avg_price.toFixed(2)} €` : '—'}</p></div>
                   <div><span className="text-muted">Note</span><p className="font-medium">{data.amazon_sellers.rating || '—'} / 5</p></div>
                 </div>
               </div>

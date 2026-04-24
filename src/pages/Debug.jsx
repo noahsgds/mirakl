@@ -116,7 +116,7 @@ function TableCard({ name, keyCols }) {
         </div>
         {!loading && info?.exists && (
           <span className="text-sm font-bold text-[#1B3A5C]">
-            {info.count?.toLocaleString('fr-FR')} lignes
+            {info.count?.toLocaleString('fr-FR')} rows
           </span>
         )}
       </div>
@@ -125,7 +125,7 @@ function TableCard({ name, keyCols }) {
 
       {!loading && !info?.exists && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-sm text-red-700 font-medium">Table introuvable ou accès refusé</p>
+          <p className="text-sm text-red-700 font-medium">Table not found or access denied</p>
           <p className="text-xs text-red-600 mt-1 font-mono">{info?.error}</p>
         </div>
       )}
@@ -144,7 +144,7 @@ function TableCard({ name, keyCols }) {
                 return (
                   <span
                     key={col}
-                    title={allNull ? 'Toutes les valeurs sont nulles dans le sample' : undefined}
+                    title={allNull ? 'All values are null in the sample' : undefined}
                     className={`text-xs px-2 py-0.5 rounded-full font-mono border ${
                       allNull
                         ? 'bg-red-50 text-red-500 border-red-200'
@@ -168,7 +168,7 @@ function TableCard({ name, keyCols }) {
           {/* Distributions */}
           {Object.entries(info.distributions).filter(([, v]) => v !== '__MISSING__').length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase mb-2">Distributions (500 lignes)</p>
+              <p className="text-xs font-semibold text-muted uppercase mb-2">Distributions (500 rows)</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {Object.entries(info.distributions)
                   .filter(([, v]) => v !== '__MISSING__')
@@ -230,13 +230,13 @@ export default function Debug() {
             Diagnostic Supabase
           </h1>
           <p className="text-muted text-sm mt-0.5">
-            Analyse live des tables — colonnes en <span className="font-mono font-semibold text-[#1B3A5C]">bleu</span> = colonnes clés attendues,
+            Live table analysis — columns in <span className="font-mono font-semibold text-[#1B3A5C]">blue</span> = expected key columns,
             en <span className="text-amber-600 font-semibold">ambre ✗</span> = absentes, en <span className="text-red-500 font-semibold">rouge ⚠</span> = toujours nulles
           </p>
         </div>
         <button onClick={() => setKey((k) => k + 1)} className="flex items-center gap-2 btn-secondary">
           <RefreshCw size={14} />
-          Relancer
+          Retry
         </button>
       </div>
 
@@ -244,8 +244,8 @@ export default function Debug() {
         <div className="flex items-start gap-2">
           <AlertTriangle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
-            Page réservée au diagnostic — distributions calculées sur les 500 premières lignes.
-            Partage cette page avec Claude pour qu'il adapte le dashboard au schéma réel.
+            Diagnostic page only — distributions computed on the first 500 rows.
+            Share this page with Claude to adapt the dashboard to the real schema.
           </p>
         </div>
       </div>

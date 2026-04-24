@@ -15,7 +15,7 @@ const SAVED_VIEWS = [
   { key: 'all',             label: 'All Leads',        filter: () => true },
   { key: 'ready',           label: 'Ready Now',        filter: m => sendReadiness(m) === 'ready' },
   { key: 'missing_contact', label: 'Needs Contact',    filter: m => sendReadiness(m) === 'missing_contact' },
-  { key: 'high_score',      label: 'Top Score',        filter: m => (m.compatibility_score ?? 0) >= 80 },
+  { key: 'high_score',      label: 'High Fit',         filter: m => (m.compatibility_score ?? 0) > 70 },
   { key: 'in_campaign',     label: 'In Campaign',      filter: m => sendReadiness(m) === 'in_campaign' },
 ]
 
@@ -67,34 +67,34 @@ function EmailGenerationCard({ match, seller }) {
   const [copied, setCopied] = useState(null)
 
   const subjectDetailed = match?.rationale
-    ? `Partenariat ${match.marketplace_name} × ${match.seller_name} — opportunité catégorie ${seller?.categories ?? 'mode'}`
+    ? `Partnership ${match.marketplace_name} × ${match.seller_name} — category opportunity ${seller?.categories ?? 'mode'}`
     : null
 
-  const bodyDetailed = match ? `Bonjour ${match.decision_maker_name || 'Madame, Monsieur'},
+  const bodyDetailed = match ? `Hello ${match.decision_maker_name || 'there'},
 
-Je me permets de vous contacter au sujet d'une opportunité de développement commercial qui me semble particulièrement pertinente pour ${match.seller_name}.
+I am reaching out regarding a business development opportunity that seems highly relevant for ${match.seller_name}.
 
-${match.rationale ?? `Vos produits présentent un fort alignement avec la proposition de valeur de ${match.marketplace_name}, notamment sur les dimensions de positionnement prix, d'audience cible et de complémentarité catégorielle.`}
+${match.rationale ?? `Your products show strong alignment with ${match.marketplace_name}'s value proposition, especially on pricing position, target audience, and category fit.`}
 
-${match['Top 3 products to push for each marketplace'] ? `Les produits qui retiennent particulièrement notre attention : ${match['Top 3 products to push for each marketplace']}` : ''}
+${match['Top 3 products to push for each marketplace'] ? `Products we would especially highlight: ${match['Top 3 products to push for each marketplace']}` : ''}
 
-Seriez-vous disponible pour un échange de 20 minutes afin que nous puissions explorer ensemble les conditions d'un partenariat ?
+Would you be available for a 20-minute conversation so we can explore partnership terms together?
 
-Cordialement,
-[Votre nom] — Mirakl Connect` : ''
+Best regards,
+[Your name] — Mirakl Connect` : ''
 
   const subjectShort = match
     ? `${match.seller_name} sur ${match.marketplace_name} — fit ${Math.round(match.compatibility_score ?? 0)}/100`
     : null
 
   const bodyShort = match
-    ? `Bonjour ${match.decision_maker_name?.split(' ')[0] || ''},
+    ? `Hi ${match.decision_maker_name?.split(' ')[0] || ''},
 
-Vos produits ont un score de compatibilité de ${Math.round(match.compatibility_score ?? 0)}/100 avec ${match.marketplace_name}.
+Your products have a compatibility score of ${Math.round(match.compatibility_score ?? 0)}/100 with ${match.marketplace_name}.
 
-Seriez-vous disponible 20 min cette semaine ?
+Would you be available for 20 minutes this week?
 
-[Votre nom]`
+[Your name]`
     : ''
 
   function copy(text, key) {
@@ -165,6 +165,7 @@ Seriez-vous disponible 20 min cette semaine ?
 }
 
 export default function C2Dashboard() {
+  const PAGE_SIZE = 10
   const [matches, setMatches]     = useState([])
   const [sellers, setSellers]     = useState([])
   const [loading, setLoading]     = useState(true)
@@ -173,10 +174,11 @@ export default function C2Dashboard() {
   const [selected, setSelected]   = useState(null)
   const [sortKey, setSortKey]     = useState('compatibility_score')
   const [sortDir, setSortDir]     = useState('desc')
+  const [page, setPage]           = useState(1)
 
   async function load() {
     setLoading(true)
-    const [m, s] = await Promise.all([fetchMatches({ limit: 1000 }), fetchSellers()])
+    const [m, s] = await Promise.all([fetchMatches({ limit: 5000 }), fetchSellers()])
     setMatches(m.data)
     setSellers(s.data)
     setLoading(false)
@@ -190,21 +192,32 @@ export default function C2Dashboard() {
     return map
   }, [sellers])
 
+  const leadRows = useMemo(() => {
+    const bestBySeller = new Map()
+    for (const match of matches) {
+      const existing = bestBySeller.get(match.seller_id)
+      if (!existing || (match.compatibility_score ?? 0) > (existing.compatibility_score ?? 0)) {
+        bestBySeller.set(match.seller_id, match)
+      }
+    }
+    return Array.from(bestBySeller.values())
+  }, [matches])
+
   // KPIs
   const kpis = useMemo(() => {
-    const total       = matches.length
-    const highFit     = matches.filter(m => (m.compatibility_score ?? 0) >= 80).length
-    const ready       = matches.filter(m => sendReadiness(m) === 'ready').length
-    const noContact   = matches.filter(m => !m.decision_maker_email).length
-    const inCampaign  = matches.filter(m => sendReadiness(m) === 'in_campaign').length
+    const total       = leadRows.length
+    const highFit     = leadRows.filter(m => (m.compatibility_score ?? 0) > 70).length
+    const ready       = leadRows.filter(m => sendReadiness(m) === 'ready').length
+    const noContact   = leadRows.filter(m => !m.decision_maker_email).length
+    const inCampaign  = leadRows.filter(m => sendReadiness(m) === 'in_campaign').length
     return { total, highFit, ready, noContact, inCampaign }
-  }, [matches])
+  }, [leadRows])
 
   // Filtered + sorted rows
   const rows = useMemo(() => {
     const viewFilter = SAVED_VIEWS.find(v => v.key === view)?.filter ?? (() => true)
     const s = search.trim().toLowerCase()
-    let out = matches.filter(m => {
+    let out = leadRows.filter(m => {
       if (!viewFilter(m)) return false
       if (s) {
         const hay = `${m.seller_name ?? ''} ${m.marketplace_name ?? ''} ${m.decision_maker_name ?? ''}`.toLowerCase()
@@ -220,7 +233,22 @@ export default function C2Dashboard() {
       return sortDir === 'asc' ? cmp : -cmp
     })
     return out
-  }, [matches, search, view, sortKey, sortDir])
+  }, [leadRows, search, view, sortKey, sortDir])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, view, sortKey, sortDir])
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return rows.slice(start, start + PAGE_SIZE)
+  }, [rows, page, PAGE_SIZE])
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -246,7 +274,7 @@ export default function C2Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <KpiCard icon={Users}       label="Total Leads"     value={kpis.total}      color="blue"    onClick={() => setView('all')} />
-        <KpiCard icon={TrendingUp}  label="High Fit (≥80)"  value={kpis.highFit}    color="emerald" onClick={() => setView('high_score')} />
+        <KpiCard icon={TrendingUp}  label="High Fit (>70)"  value={kpis.highFit}    color="emerald" onClick={() => setView('high_score')} />
         <KpiCard icon={CheckCircle2}label="Ready to Send"   value={kpis.ready}      color="purple"  onClick={() => setView('ready')} />
         <KpiCard icon={AlertCircle} label="Missing Contact" value={kpis.noContact}  color="amber"   onClick={() => setView('missing_contact')} />
         <KpiCard icon={Send}        label="In Campaign"     value={kpis.inCampaign} color="blue"    onClick={() => setView('in_campaign')} />
@@ -285,6 +313,11 @@ export default function C2Dashboard() {
               <span className="text-xs font-semibold text-muted uppercase tracking-wide">
                 {rows.length} leads
               </span>
+              {!loading && rows.length > 0 && (
+                <span className="text-xs text-muted">
+                  Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, rows.length)}
+                </span>
+              )}
             </div>
             {loading ? (
               <div className="p-10 text-center text-muted text-sm">Loading leads...</div>
@@ -304,7 +337,7 @@ export default function C2Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.slice(0, 200).map(m => {
+                    {paginatedRows.map(m => {
                       const isSelected = selected?.seller_id === m.seller_id && selected?.marketplace_id === m.marketplace_id
                       return (
                         <tr
@@ -343,6 +376,27 @@ export default function C2Dashboard() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {!loading && rows.length > 0 && (
+              <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn-secondary text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-muted">
+                  Page {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="btn-secondary text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>

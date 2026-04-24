@@ -82,20 +82,20 @@ export default function ABTest() {
 
   const chartData = stats
     ? [
-        { metric: 'Enrichissement', A: stats.A.enrichRate, B: stats.B.enrichRate },
+        { metric: 'Enrichment', A: stats.A.enrichRate, B: stats.B.enrichRate },
         { metric: 'Ouverture', A: stats.A.openRate, B: stats.B.openRate },
         { metric: 'HOT', A: stats.A.hotRate, B: stats.B.hotRate },
-        { metric: 'Réponse', A: stats.A.replyRate, B: stats.B.replyRate },
+        { metric: 'Reply', A: stats.A.replyRate, B: stats.B.replyRate },
       ]
     : []
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Chargement...</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-muted">Loading...</div>
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text">A/B Test</h1>
-        <p className="text-muted text-sm mt-0.5">Variant A (angle croissance) vs Variant B (angle visibilité marque)</p>
+        <p className="text-muted text-sm mt-0.5">Variant A (growth angle) vs Variant B (brand visibility angle)</p>
       </div>
 
       {/* Volume */}
@@ -104,31 +104,31 @@ export default function ABTest() {
           <div className="text-3xl font-bold text-[#1B3A5C]">{stats?.A.total}</div>
           <div className="flex items-center justify-center gap-2 mt-2">
             <span className="text-xs bg-[#1B3A5C]/10 text-[#1B3A5C] px-2 py-0.5 rounded-full font-semibold">Variant A</span>
-            <span className="text-sm text-muted">leads assignés</span>
+            <span className="text-sm text-muted">assigned leads</span>
           </div>
         </div>
         <div className="card text-center">
           <div className="text-3xl font-bold text-[#E8445A]">{stats?.B.total}</div>
           <div className="flex items-center justify-center gap-2 mt-2">
             <span className="text-xs bg-[#E8445A]/10 text-[#E8445A] px-2 py-0.5 rounded-full font-semibold">Variant B</span>
-            <span className="text-sm text-muted">leads assignés</span>
+            <span className="text-sm text-muted">assigned leads</span>
           </div>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Taux enrichissement" a={stats?.A.enrichRate} b={stats?.B.enrichRate} icon={Users} />
-        <StatCard label="Taux ouverture" a={stats?.A.openRate} b={stats?.B.openRate} icon={Mail} />
-        <StatCard label="Taux HOT" a={stats?.A.hotRate} b={stats?.B.hotRate} icon={TrendingUp} />
-        <StatCard label="Taux réponse" a={stats?.A.replyRate} b={stats?.B.replyRate} icon={MessageSquare} />
+        <StatCard label="Enrichment rate" a={stats?.A.enrichRate} b={stats?.B.enrichRate} icon={Users} />
+        <StatCard label="Open rate" a={stats?.A.openRate} b={stats?.B.openRate} icon={Mail} />
+        <StatCard label="HOT rate" a={stats?.A.hotRate} b={stats?.B.hotRate} icon={TrendingUp} />
+        <StatCard label="Reply rate" a={stats?.A.replyRate} b={stats?.B.replyRate} icon={MessageSquare} />
       </div>
 
       {/* Chart */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <FlaskConical size={18} className="text-[#1B3A5C]" />
-          <h2 className="font-semibold text-text">Comparaison des taux</h2>
+          <h2 className="font-semibold text-text">Rate comparison</h2>
         </div>
         <ABTestChart data={chartData} />
       </div>
@@ -138,7 +138,7 @@ export default function ABTest() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">Métrique</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">Metric</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-[#1B3A5C] uppercase">Variant A</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-[#E8445A] uppercase">Variant B</th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-muted uppercase">Delta</th>
@@ -146,11 +146,11 @@ export default function ABTest() {
           </thead>
           <tbody>
             {[
-              { label: 'Leads totaux', a: stats?.A.total, b: stats?.B.total, pct: false },
-              { label: 'Taux enrichissement', a: stats?.A.enrichRate, b: stats?.B.enrichRate, pct: true },
-              { label: 'Taux ouverture', a: stats?.A.openRate, b: stats?.B.openRate, pct: true },
-              { label: 'Taux HOT', a: stats?.A.hotRate, b: stats?.B.hotRate, pct: true },
-              { label: 'Taux réponse', a: stats?.A.replyRate, b: stats?.B.replyRate, pct: true },
+              { label: 'Total leads', a: stats?.A.total, b: stats?.B.total, pct: false },
+              { label: 'Enrichment rate', a: stats?.A.enrichRate, b: stats?.B.enrichRate, pct: true },
+              { label: 'Open rate', a: stats?.A.openRate, b: stats?.B.openRate, pct: true },
+              { label: 'HOT rate', a: stats?.A.hotRate, b: stats?.B.hotRate, pct: true },
+              { label: 'Reply rate', a: stats?.A.replyRate, b: stats?.B.replyRate, pct: true },
             ].map(({ label, a, b, pct: isPct }) => {
               const delta = (a || 0) - (b || 0)
               return (
