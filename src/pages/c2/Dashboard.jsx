@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import {
   fetchMatches, fetchSellers, fetchMarketplaces,
-  fitBandLabel, fitBandColor, readinessLabel, readinessColor, sendReadiness,
+  fitBandLabel, fitBandColor, readinessLabel, readinessColor, sendReadiness, resolveLeadContact,
 } from '../../lib/c2'
 
 const SAVED_VIEWS = [
@@ -18,6 +18,168 @@ const SAVED_VIEWS = [
   { key: 'high_score',      label: 'High Fit',         filter: m => (m.compatibility_score ?? 0) > 70 },
   { key: 'in_campaign',     label: 'In Campaign',      filter: m => sendReadiness(m) === 'in_campaign' },
 ]
+
+function splitValues(input) {
+  if (!input) return []
+  return String(input)
+    .split(/[,\n|]/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
+
+function inferVertical(match) {
+  const raw = [
+    match?.categories,
+    match?.marketplace_main_categories,
+    match?.product_types_list,
+    match?.top_product_tags,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (/home|garden|furniture|decor|lighting/.test(raw)) return 'home_garden'
+  if (/beauty|cosmetic|skincare|fragrance/.test(raw)) return 'beauty'
+  if (/fashion|apparel|clothing|footwear|accessories/.test(raw)) return 'fashion'
+  if (/sport|fitness|outdoor/.test(raw)) return 'sport'
+  return 'general'
+}
+
+function seasonalContext() {
+  const month = new Date().getMonth() + 1
+  if (month >= 9 && month <= 12) {
+    return {
+      periodLabel: 'peak season',
+      urgencyLine: 'Peak season is approaching fast, and channel coverage will decide who captures demand.',
+      ctaLine: 'Would you be open to a quick call this week to prepare your marketplace plan before peak season?',
+    }
+  }
+  if (month >= 1 && month <= 3) {
+    return {
+      periodLabel: 'new-quarter planning',
+      urgencyLine: 'This is the right time to lock high-impact marketplace priorities for the new quarter.',
+      ctaLine: 'Open to a quick call this week to align your next marketplace moves?',
+    }
+  }
+  return {
+    periodLabel: 'growth planning',
+    urgencyLine: 'Now is a strong moment to accelerate multichannel growth before your competitors catch up.',
+    ctaLine: 'Would you be open to a quick call this week to review the best channels for your expansion?',
+  }
+}
+
+function createMiraklEmailVariants(match, seller, tone = 'professional') {
+  const firstName = match?.decision_maker_name
+    ? String(match.decision_maker_name).split(' ')[0]
+    : 'there'
+  const score = Math.round(Number(match?.compatibility_score ?? 0))
+  const vertical = inferVertical(match)
+  const seasonal = seasonalContext()
+
+  const toneLines = {
+    professional: {
+      opener: `I am reaching out regarding a strong marketplace opportunity for ${match.seller_name}.`,
+      cta: 'Would you be open to a 20-minute call this week to review fit and next steps?',
+    },
+    direct: {
+      opener: `${match.seller_name} is a strong fit for ${match.marketplace_name}, and we should discuss activation quickly.`,
+      cta: 'Can we lock a 20-minute call this week?',
+    },
+    warm: {
+      opener: `I thought this would be highly relevant for ${match.seller_name} and wanted to share it with you.`,
+      cta: 'If useful, I would love to schedule a short 20-minute conversation.',
+    },
+  }[tone]
+
+  const rationale =
+    match.rationale ||
+    `Your brand positioning and category alignment look particularly strong for ${match.marketplace_name}.`
+
+  const products = splitValues(match['Top 3 products to push for each marketplace']).slice(0, 3)
+  const categories = seller?.categories || match?.product_types_list || match?.marketplace_main_categories || 'your category'
+  const country = seller?.country_origin ? `from ${seller.country_origin}` : ''
+  const nbProducts = seller?.nb_products ? `${Number(seller.nb_products).toLocaleString()} products` : null
+  const avgPrice = seller?.avg_price ? `avg price around €${Math.round(Number(seller.avg_price))}` : null
+  const dataProof = [nbProducts, avgPrice].filter(Boolean).join(' · ')
+  const comm = match?.marketplace_commission_rate != null
+    ? `${Math.round(Number(match.marketplace_commission_rate) * 100)}% commission context`
+    : null
+  const traffic = match?.marketplace_monthly_traffic ? `${match.marketplace_monthly_traffic} monthly traffic` : null
+  const marketProof = [traffic, comm].filter(Boolean).join(' · ')
+  const seasonalHeadline =
+    seasonal.periodLabel === 'peak season' ? 'peak season' : seasonal.periodLabel === 'new-quarter planning' ? 'Q planning' : 'growth plan'
+
+  const subjectCandidates = [
+    { s: `Are you selling on ${match.marketplace_name}?`, w: 96 + (score >= 70 ? 10 : 0) },
+    { s: `${match.seller_name}: how to win ${seasonalHeadline}?`, w: 92 + (match.rationale ? 6 : 0) },
+    { s: `Scale ${match.seller_name} like top marketplace brands`, w: 88 + (marketProof ? 6 : 0) },
+    { s: `Still have products to publish on ${match.marketplace_name}?`, w: 85 + (products.length ? 8 : 0) },
+    { s: `${match.seller_name}: expand faster with Mirakl Connect`, w: 82 + score / 10 },
+    ...(vertical === 'home_garden'
+      ? [{ s: `Expand ${match.seller_name} across Europe’s Home & Garden marketplaces`, w: 100 }]
+      : []),
+  ]
+  const bestSubject = [...subjectCandidates].sort((a, b) => b.w - a.w)[0]?.s || `Are you selling on ${match.marketplace_name}?`
+
+  const sharedMiraklBullets = [
+    'Access 450+ Mirakl-powered marketplaces globally',
+    'Launch in days, not months, with AI-powered catalog adaptation',
+    'Prioritize channels where your assortment and margins fit best',
+  ]
+
+  const detailedLines = [
+    `Hi ${firstName},`,
+    '',
+    toneLines.opener,
+    '',
+    seasonal.urgencyLine,
+    '',
+    `For ${match.seller_name} ${country}, we see a strong opportunity on ${match.marketplace_name} (${score}/100 compatibility).`,
+    rationale,
+    ...(dataProof ? ['', `Brand data signal: ${dataProof}.`] : []),
+    ...(marketProof ? [`Marketplace signal: ${marketProof}.`] : []),
+    '',
+    'Why Mirakl Connect:',
+    ...sharedMiraklBullets.map((b) => `- ${b}`),
+    ...(products.length
+      ? [
+          '',
+          'Products to prioritize first:',
+          ...products.map((p) => `- ${p}`),
+        ]
+      : []),
+    '',
+    `Category focus: ${categories}.`,
+    toneLines.cta,
+    '',
+    'Best regards,',
+    '[Your Name]',
+    'Mirakl',
+  ]
+
+  const shortLines = [
+    `Hi ${firstName},`,
+    '',
+    `${match.seller_name} is a ${score}/100 fit for ${match.marketplace_name}.`,
+    `This can help accelerate your multichannel growth in ${categories}.`,
+    ...(products[0] ? [`First product priority: ${products[0]}.`] : []),
+    seasonal.ctaLine,
+    '',
+    '[Your Name]',
+    'Mirakl',
+  ]
+
+  return {
+    detailed: {
+      subject: bestSubject,
+      body: detailedLines.join('\n'),
+    },
+    short: {
+      subject: `${match.seller_name}: opportunity on ${match.marketplace_name}`,
+      body: shortLines.join('\n'),
+    },
+  }
+}
 
 function KpiCard({ icon: Icon, label, value, delta, color, onClick }) {
   const palette = {
@@ -66,36 +228,7 @@ function EmailGenerationCard({ match, seller }) {
   const [tone, setTone] = useState('professional')
   const [copied, setCopied] = useState(null)
 
-  const subjectDetailed = match?.rationale
-    ? `Partnership ${match.marketplace_name} × ${match.seller_name} — category opportunity ${seller?.categories ?? 'mode'}`
-    : null
-
-  const bodyDetailed = match ? `Hello ${match.decision_maker_name || 'there'},
-
-I am reaching out regarding a business development opportunity that seems highly relevant for ${match.seller_name}.
-
-${match.rationale ?? `Your products show strong alignment with ${match.marketplace_name}'s value proposition, especially on pricing position, target audience, and category fit.`}
-
-${match['Top 3 products to push for each marketplace'] ? `Products we would especially highlight: ${match['Top 3 products to push for each marketplace']}` : ''}
-
-Would you be available for a 20-minute conversation so we can explore partnership terms together?
-
-Best regards,
-[Your name] — Mirakl Connect` : ''
-
-  const subjectShort = match
-    ? `${match.seller_name} sur ${match.marketplace_name} — fit ${Math.round(match.compatibility_score ?? 0)}/100`
-    : null
-
-  const bodyShort = match
-    ? `Hi ${match.decision_maker_name?.split(' ')[0] || ''},
-
-Your products have a compatibility score of ${Math.round(match.compatibility_score ?? 0)}/100 with ${match.marketplace_name}.
-
-Would you be available for 20 minutes this week?
-
-[Your name]`
-    : ''
+  const variants = match ? createMiraklEmailVariants(match, seller, tone) : null
 
   function copy(text, key) {
     navigator.clipboard.writeText(text)
@@ -133,8 +266,8 @@ Would you be available for 20 minutes this week?
 
       <div className="grid grid-cols-1 gap-3">
         {[
-          { key: 'detailed', label: 'Detailed Personalized Email', subject: subjectDetailed, body: bodyDetailed },
-          { key: 'short',    label: 'Short High-Conviction Email',  subject: subjectShort,    body: bodyShort },
+          { key: 'detailed', label: 'Detailed Personalized Email', subject: variants?.detailed?.subject, body: variants?.detailed?.body },
+          { key: 'short',    label: 'Short High-Conviction Email',  subject: variants?.short?.subject,    body: variants?.short?.body },
         ].map(({ key, label, subject, body }) => (
           <div key={key} className="rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -171,6 +304,11 @@ export default function C2Dashboard() {
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
   const [view, setView]           = useState('all')
+  const [filterMarketplace, setFilterMarketplace] = useState('')
+  const [filterReadiness, setFilterReadiness] = useState('')
+  const [filterContact, setFilterContact] = useState('all')
+  const [minScore, setMinScore] = useState('')
+  const [maxScore, setMaxScore] = useState('')
   const [selected, setSelected]   = useState(null)
   const [sortKey, setSortKey]     = useState('compatibility_score')
   const [sortDir, setSortDir]     = useState('desc')
@@ -178,8 +316,25 @@ export default function C2Dashboard() {
 
   async function load() {
     setLoading(true)
-    const [m, s] = await Promise.all([fetchMatches({ limit: 5000 }), fetchSellers()])
-    setMatches(m.data)
+    const [m, s, mp] = await Promise.all([fetchMatches({ limit: 5000 }), fetchSellers(), fetchMarketplaces()])
+    const sellersById = Object.fromEntries((s.data ?? []).map((item) => [item.seller_id, item]))
+    const marketplacesById = Object.fromEntries((mp.data ?? []).map((item) => [item.marketplace_id, item]))
+    const enriched = (m.data ?? []).map((item) => {
+      const seller = sellersById[item.seller_id] ?? {}
+      const contact = resolveLeadContact(item, seller)
+      const marketplace = marketplacesById[item.marketplace_id] ?? {}
+      return {
+        ...item,
+        ...seller,
+        decision_maker_email: contact.email,
+        decision_maker_name: contact.name,
+        marketplace_main_categories: marketplace.main_categories ?? null,
+        marketplace_countries: marketplace.countries ?? null,
+        marketplace_monthly_traffic: marketplace.monthly_traffic ?? null,
+        marketplace_commission_rate: marketplace.commission_rate ?? null,
+      }
+    })
+    setMatches(enriched)
     setSellers(s.data)
     setLoading(false)
   }
@@ -193,15 +348,28 @@ export default function C2Dashboard() {
   }, [sellers])
 
   const leadRows = useMemo(() => {
+    const normalized = matches.map(match => {
+      const seller = sellersById[match.seller_id]
+      const contact = resolveLeadContact(match, seller)
+      return {
+        ...match,
+        decision_maker_email: contact.email,
+        decision_maker_name: contact.name,
+      }
+    })
     const bestBySeller = new Map()
-    for (const match of matches) {
+    for (const match of normalized) {
       const existing = bestBySeller.get(match.seller_id)
       if (!existing || (match.compatibility_score ?? 0) > (existing.compatibility_score ?? 0)) {
         bestBySeller.set(match.seller_id, match)
       }
     }
     return Array.from(bestBySeller.values())
-  }, [matches])
+  }, [matches, sellersById])
+
+  const marketplaces = useMemo(() => {
+    return [...new Set(leadRows.map(m => m.marketplace_name).filter(Boolean))].sort()
+  }, [leadRows])
 
   // KPIs
   const kpis = useMemo(() => {
@@ -219,6 +387,12 @@ export default function C2Dashboard() {
     const s = search.trim().toLowerCase()
     let out = leadRows.filter(m => {
       if (!viewFilter(m)) return false
+      if (filterMarketplace && m.marketplace_name !== filterMarketplace) return false
+      if (filterReadiness && sendReadiness(m) !== filterReadiness) return false
+      if (filterContact === 'with' && !m.decision_maker_email) return false
+      const score = Number(m.compatibility_score ?? 0)
+      if (minScore !== '' && score < Number(minScore)) return false
+      if (maxScore !== '' && score > Number(maxScore)) return false
       if (s) {
         const hay = `${m.seller_name ?? ''} ${m.marketplace_name ?? ''} ${m.decision_maker_name ?? ''}`.toLowerCase()
         if (!hay.includes(s)) return false
@@ -233,11 +407,11 @@ export default function C2Dashboard() {
       return sortDir === 'asc' ? cmp : -cmp
     })
     return out
-  }, [leadRows, search, view, sortKey, sortDir])
+  }, [leadRows, search, view, filterMarketplace, filterReadiness, filterContact, minScore, maxScore, sortKey, sortDir])
 
   useEffect(() => {
     setPage(1)
-  }, [search, view, sortKey, sortDir])
+  }, [search, view, filterMarketplace, filterReadiness, filterContact, minScore, maxScore, sortKey, sortDir])
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
 
@@ -253,6 +427,21 @@ export default function C2Dashboard() {
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('desc') }
+  }
+
+  const hasAdvancedFilters =
+    filterMarketplace !== '' ||
+    filterReadiness !== '' ||
+    filterContact !== 'all' ||
+    minScore !== '' ||
+    maxScore !== ''
+
+  function resetAdvancedFilters() {
+    setFilterMarketplace('')
+    setFilterReadiness('')
+    setFilterContact('all')
+    setMinScore('')
+    setMaxScore('')
   }
 
   const selectedSeller = selected ? sellersById[selected.seller_id] : null
@@ -296,15 +485,71 @@ export default function C2Dashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Lead queue (2/3 width) */}
         <div className="xl:col-span-2 space-y-3">
-          {/* Search */}
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search sellers, marketplaces, contacts..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
-            />
+          {/* Search + filters */}
+          <div className="card space-y-3">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search sellers, marketplaces, contacts..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+              <select
+                value={filterMarketplace}
+                onChange={e => setFilterMarketplace(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+              >
+                <option value="">All marketplaces</option>
+                {marketplaces.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+              <select
+                value={filterReadiness}
+                onChange={e => setFilterReadiness(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+              >
+                <option value="">All readiness</option>
+                <option value="ready">Ready</option>
+                <option value="missing_contact">Missing contact</option>
+                <option value="in_campaign">In campaign</option>
+              </select>
+              <select
+                value={filterContact}
+                onChange={e => setFilterContact(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+              >
+                <option value="all">All contacts</option>
+                <option value="with">With contact</option>
+                <option value="missing">Missing contact</option>
+              </select>
+              <input
+                value={minScore}
+                onChange={e => setMinScore(e.target.value)}
+                type="number"
+                min="0"
+                max="100"
+                placeholder="Min score"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none"
+              />
+              <input
+                value={maxScore}
+                onChange={e => setMaxScore(e.target.value)}
+                type="number"
+                min="0"
+                max="100"
+                placeholder="Max score"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none"
+              />
+              <button
+                onClick={resetAdvancedFilters}
+                disabled={!hasAdvancedFilters}
+                className="btn-secondary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Reset filters
+              </button>
+            </div>
           </div>
 
           {/* Table */}
@@ -460,9 +705,7 @@ export default function C2Dashboard() {
                       {selected.decision_maker_title && <div className="text-xs text-muted">{selected.decision_maker_title}</div>}
                       <div className="flex items-center gap-2 mt-1">
                         {selected.decision_maker_email && (
-                          <a href={`mailto:${selected.decision_maker_email}`} className="text-xs text-[#2563EB] hover:underline truncate max-w-[160px]">
-                            {selected.decision_maker_email}
-                          </a>
+                          <span className="text-xs text-emerald-600">Email on file</span>
                         )}
                         {selected.decision_maker_linkedin && (
                           <a href={selected.decision_maker_linkedin} target="_blank" rel="noopener noreferrer" className="text-[#0A66C2]">

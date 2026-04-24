@@ -45,21 +45,22 @@ export default function C2Marketplaces() {
     ...(mpStats[mp.marketplace_id] ?? { count: 0, highFit: 0, avgScore: 0 }),
   })), [marketplaces, mpStats])
 
+  const withMatches = useMemo(() => enriched.filter(mp => (mp.count ?? 0) > 0), [enriched])
+
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase()
-    return enriched.filter(mp => {
+    return withMatches.filter(mp => {
       if (s) return mp.marketplace_name?.toLowerCase().includes(s) || mp.main_categories?.toLowerCase().includes(s)
       return true
     })
-  }, [enriched, search])
+  }, [withMatches, search])
 
   const selectedMatches = useMemo(() =>
     selected ? matches.filter(m => m.marketplace_id === selected.marketplace_id).sort((a, b) => (b.compatibility_score ?? 0) - (a.compatibility_score ?? 0)) : [],
     [selected, matches])
 
   // Chart data
-  const chartData = enriched
-    .filter(mp => mp.count > 0)
+  const chartData = withMatches
     .sort((a, b) => b.avgScore - a.avgScore)
     .slice(0, 12)
     .map(mp => ({ name: mp.marketplace_name?.replace(/ /g, '\n'), avg: parseFloat(mp.avgScore.toFixed(1)), count: mp.count }))
@@ -140,14 +141,9 @@ export default function C2Marketplaces() {
                         <div className="font-bold text-emerald-600">{mp.highFit}</div>
                         <div className="text-muted">High fit</div>
                       </div>
-                      <div className="text-center rounded-lg bg-gray-50 p-1.5">
-                        <div className="font-bold text-text">{mp.commission_rate != null ? `${(mp.commission_rate * 100).toFixed(0)}%` : '—'}</div>
-                        <div className="text-muted">Commission</div>
-                      </div>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted">
                       <span className="flex items-center gap-1"><Globe size={10} /> {mp.countries ?? '—'}</span>
-                      <span>{mp.monthly_traffic ?? '—'}</span>
                     </div>
 
                     {mode === 'compare' && (
@@ -202,8 +198,6 @@ function MarketplaceDetail({ mp, topMatches, onClose }) {
         {[
           ['Categories',   mp.main_categories],
           ['Countries',    mp.countries],
-          ['Traffic',      mp.monthly_traffic],
-          ['Commission',   mp.commission_rate != null ? `${(mp.commission_rate * 100).toFixed(0)}%` : null],
           ['Matched sellers', mp.count],
           ['High fit',     mp.highFit],
           ['Avg score',    mp.avgScore?.toFixed(1)],
@@ -256,8 +250,6 @@ function ComparePanel({ a, b, matches, onClose }) {
               <div><span className="text-muted">Avg score:</span> <b>{avg.toFixed(1)}</b></div>
               <div><span className="text-muted">Matches:</span> <b>{stats.length}</b></div>
               <div><span className="text-muted">High fit:</span> <b>{stats.filter(m => (m.compatibility_score ?? 0) > 70).length}</b></div>
-              <div><span className="text-muted">Commission:</span> <b>{mp.commission_rate != null ? `${(mp.commission_rate * 100).toFixed(0)}%` : '—'}</b></div>
-              <div><span className="text-muted">Traffic:</span> <b>{mp.monthly_traffic ?? '—'}</b></div>
               <div><span className="text-muted">Categories:</span> <b className="line-clamp-2">{mp.main_categories ?? '—'}</b></div>
             </div>
           </div>

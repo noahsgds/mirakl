@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Shield, ChevronRight, X, CheckCircle2, AlertCircle,
+  Search, X, CheckCircle2, AlertCircle,
   Linkedin, ExternalLink, TrendingUp, Tag, Users, MessageSquare,
   Crosshair, Zap, ArrowRight, Trophy, Swords,
 } from 'lucide-react'
-import { fetchMatches, fetchSellers, fitBandLabel, fitBandColor, readinessLabel, readinessColor } from '../../lib/c2'
+import { fetchMatches, fetchSellers, fitBandLabel, fitBandColor, readinessLabel, readinessColor, resolveLeadContact } from '../../lib/c2'
 
 /* ── Evidence card helper ───────────────────────────── */
 function EvidenceCard({ title, explanation, field, strength }) {
@@ -53,7 +53,7 @@ function MatchDefenseMode({ winner, challenger, seller }) {
     if (match.rationale) signals.push({ title: 'Commercial alignment', explanation: match.rationale?.slice(0, 180), strength: 'strong', field: 'rationale' })
     if (match['Top 3 products to push for each marketplace']) signals.push({ title: 'Product fit', explanation: match['Top 3 products to push for each marketplace']?.slice(0, 140), strength: 'medium', field: 'top_products' })
     if ((match.compatibility_score ?? 0) >= 80) signals.push({ title: 'High compatibility score', explanation: `Score of ${Number(match.compatibility_score).toFixed(1)}/100 — top-tier fit.`, strength: 'strong', field: 'compatibility_score' })
-    if (match.decision_maker_email) signals.push({ title: 'Decision maker identified', explanation: `${match.decision_maker_name ?? 'Contact'} reachable at ${match.decision_maker_email}.`, strength: 'strong', field: 'decision_maker' })
+    if (match.decision_maker_email) signals.push({ title: 'Decision maker identified', explanation: `${match.decision_maker_name ?? 'Contact'} reachable (email validated).`, strength: 'strong', field: 'decision_maker' })
     if (!match.decision_maker_email) signals.push({ title: 'No contact found', explanation: 'Enrichment needed before outreach can begin.', strength: 'weak', field: 'decision_maker' })
     return signals
   }
@@ -162,7 +162,17 @@ export default function C2Matching() {
   async function load() {
     setLoading(true)
     const [m, s] = await Promise.all([fetchMatches({ limit: 2000 }), fetchSellers()])
-    setMatches(m.data)
+    const sellersById = Object.fromEntries((s.data ?? []).map((item) => [item.seller_id, item]))
+    const normalizedMatches = (m.data ?? []).map((item) => {
+      const seller = sellersById[item.seller_id] ?? null
+      const contact = resolveLeadContact(item, seller)
+      return {
+        ...item,
+        decision_maker_email: contact.email,
+        decision_maker_name: contact.name,
+      }
+    })
+    setMatches(normalizedMatches)
     setSellers(s.data)
     setLoading(false)
   }
@@ -338,20 +348,24 @@ export default function C2Matching() {
                           <div className="space-y-4">
                             <div className="card space-y-3">
                               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact confidence</div>
-                              {activeMatch.decision_maker_name ? (
+                              {activeMatch.decision_maker_email || activeMatch.decision_maker_name ? (
                                 <div className="space-y-1.5">
-                                  <div className="font-semibold text-sm text-text">{activeMatch.decision_maker_name}</div>
+                                  <div className="font-semibold text-sm text-text">
+                                    {activeMatch.decision_maker_name || 'Decision maker not named'}
+                                  </div>
                                   {activeMatch.decision_maker_title && <div className="text-xs text-muted">{activeMatch.decision_maker_title}</div>}
                                   <div className="flex items-center gap-2">
                                     {activeMatch.decision_maker_email && (
-                                      <a href={`mailto:${activeMatch.decision_maker_email}`} className="text-xs text-[#2563EB] hover:underline">{activeMatch.decision_maker_email}</a>
+                                      <a href={`mailto:${activeMatch.decision_maker_email}`} className="text-xs text-[#2563EB] hover:underline">
+                                        {activeMatch.decision_maker_email}
+                                      </a>
                                     )}
                                     {activeMatch.decision_maker_linkedin && (
                                       <a href={activeMatch.decision_maker_linkedin} target="_blank" rel="noopener noreferrer" className="text-[#0A66C2]"><Linkedin size={13} /></a>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1 text-xs text-emerald-600">
-                                    <CheckCircle2 size={12} /> Decision maker confirmed — ready to send
+                                    <CheckCircle2 size={12} /> Contact confirmed — ready to send
                                   </div>
                                 </div>
                               ) : (

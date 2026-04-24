@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Flame, MessageSquare, ExternalLink, Phone, Trophy, XCircle, Mail, Linkedin, RefreshCw } from 'lucide-react'
+import { Flame, MessageSquare, ExternalLink, Phone, Trophy, XCircle, Mail, Linkedin, RefreshCw, Copy, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LeadDrawer from '../components/LeadDrawer'
+
+const C1_BREVO_INBOX_WEBHOOK_PATH = '/api/webhooks/c1/brevo-inbox'
 
 const TABS = [
   { key: 'HOT', label: 'HOT leads', icon: Flame, color: '#E8445A', bg: 'bg-red-50', border: 'border-red-200' },
@@ -131,6 +133,11 @@ export default function Inbox() {
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(null)
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
+  const webhookUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${C1_BREVO_INBOX_WEBHOOK_PATH}`
+      : C1_BREVO_INBOX_WEBHOOK_PATH
 
   async function load(status) {
     setLoading(true)
@@ -156,11 +163,38 @@ export default function Inbox() {
     return () => supabase.removeChannel(channel)
   }, [tab])
 
+  function copyWebhookUrl() {
+    navigator.clipboard.writeText(webhookUrl)
+    setCopiedWebhook(true)
+    setTimeout(() => setCopiedWebhook(false), 1600)
+  }
+
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-text">Inbox</h1>
         <p className="text-muted text-sm mt-0.5">HOT leads and replies to handle</p>
+      </div>
+
+      <div className="card border border-blue-100 bg-blue-50/60">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-blue-900">C1 Brevo Reply Webhook</p>
+            <p className="mt-1 text-xs text-blue-700">
+              Use this URL in Brevo inbound/reply webhook so C1 Inbox can ingest response conversations.
+            </p>
+            <p className="mt-2 rounded-md bg-white/80 px-2 py-1 font-mono text-xs text-slate-700 break-all">
+              {webhookUrl}
+            </p>
+          </div>
+          <button
+            onClick={copyWebhookUrl}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1B3A5C] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#15304e]"
+          >
+            {copiedWebhook ? <Check size={12} /> : <Copy size={12} />}
+            {copiedWebhook ? 'Copied' : 'Copy URL'}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

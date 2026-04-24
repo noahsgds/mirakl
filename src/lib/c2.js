@@ -73,6 +73,21 @@ export function readinessColor(match) {
   }[sendReadiness(match)] ?? 'bg-gray-100 text-gray-500'
 }
 
+export function resolveLeadContact(match, seller = null) {
+  const email =
+    match?.decision_maker_email ||
+    seller?.contact_email ||
+    seller?.wholesale_contact_email ||
+    null
+
+  const name =
+    match?.decision_maker_name ||
+    seller?.contact_name ||
+    null
+
+  return { email, name }
+}
+
 /* ── Local hardcoded fetchers ───────────────────────── */
 
 function compareValues(a, b) {

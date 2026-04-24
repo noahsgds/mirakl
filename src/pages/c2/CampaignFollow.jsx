@@ -1,453 +1,652 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  Activity, RefreshCw, Search, X, CheckCircle2, AlertCircle,
-  Loader2, Rocket, Linkedin, Building2, Clock, Filter, Download, Mail,
+  RefreshCw,
+  Search,
+  Building2,
+  Mail,
+  Send,
+  Wand2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react'
-import { FunnelChart, Funnel, LabelList, Tooltip, ResponsiveContainer } from 'recharts'
-import {
-  fetchMatches,
-  fetchEmails,
-  fitBandColor,
-  fitBandLabel,
-  sendReadiness,
-  saveEmailSelection,
-  markSequenceInProgress,
-} from '../../lib/c2'
-const AUTO_REFRESH = 60_000
+import { fetchMatches, fetchSellers, fetchMarketplaces, fitBandColor, sendReadiness, resolveLeadContact } from '../../lib/c2'
 
-const STATUS_TABS = [
-  { key: 'all',               label: 'All' },
-  { key: 'scored',            label: 'Scored' },
-  { key: 'pending_selection', label: 'Pending' },
-  { key: 'sequence_en_cours', label: 'Active' },
-  { key: 'sequence_terminee', label: 'Done' },
-  { key: 'failed',            label: 'Failed' },
-]
+const PAGE_SIZE = 10
 
-const PHASES = [
-  { key: 'j0', phase: 1, label: 'J0',  sub: 'First contact' },
-  { key: 'j3', phase: 2, label: 'J+3', sub: 'Follow-up 1' },
-  { key: 'j6', phase: 3, label: 'J+6', sub: 'Follow-up 2' },
-]
-
-function StatusBadge({ statut }) {
-  const m = {
-    scored:             { bg: 'bg-blue-50',   text: 'text-blue-700',    label: 'Scored' },
-    pending_selection:  { bg: 'bg-amber-50',  text: 'text-amber-700',   label: 'Pending' },
-    sequence_en_cours:  { bg: 'bg-indigo-50', text: 'text-indigo-700',  label: 'Active' },
-    sequence_terminee:  { bg: 'bg-emerald-50',text: 'text-emerald-700', label: 'Done' },
-    generation_failed:  { bg: 'bg-red-50',    text: 'text-red-700',     label: 'Gen. failed' },
-    enrichment_failed:  { bg: 'bg-red-50',    text: 'text-red-700',     label: 'Enrich. failed' },
-  }[statut] ?? { bg: 'bg-gray-100', text: 'text-gray-600', label: statut ?? '—' }
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${m.bg} ${m.text}`}>{m.label}</span>
+function splitValues(input) {
+  if (!input) return []
+  return String(input)
+    .split(/[,\n|]/)
+    .map((x) => x.trim())
+    .filter(Boolean)
 }
 
-function Toast({ toast, onClose }) {
-  if (!toast) return null
-  const base = toast.kind === 'error' ? 'bg-red-600' : toast.kind === 'info' ? 'bg-[#1B3A5C]' : 'bg-emerald-600'
-  const Icon = toast.kind === 'error' ? AlertCircle : toast.kind === 'info' ? Loader2 : CheckCircle2
+function inferVertical(match) {
+  const raw = [
+    match?.categories,
+    match?.marketplace_main_categories,
+    match?.product_types_list,
+    match?.top_product_tags,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (/home|garden|furniture|decor|lighting/.test(raw)) return 'home_garden'
+  if (/beauty|cosmetic|skincare|fragrance/.test(raw)) return 'beauty'
+  if (/fashion|apparel|clothing|footwear|accessories/.test(raw)) return 'fashion'
+  if (/sport|fitness|outdoor/.test(raw)) return 'sport'
+  return 'general'
+}
+
+function seasonalContext() {
+  const month = new Date().getMonth() + 1
+  if (month >= 9 && month <= 12) {
+    return {
+      periodLabel: 'peak season',
+      urgencyLine: 'Peak season is approaching fast, and channel coverage will decide who captures demand.',
+      ctaLine: 'Would you be open to a quick call this week to prepare your marketplace plan before peak season?',
+    }
+  }
+  if (month >= 1 && month <= 3) {
+    return {
+      periodLabel: 'new-quarter planning',
+      urgencyLine: 'This is the right time to lock high-impact marketplace priorities for the new quarter.',
+      ctaLine: 'Open to a quick call this week to align your next marketplace moves?',
+    }
+  }
+  return {
+    periodLabel: 'growth planning',
+    urgencyLine: 'Now is a strong moment to accelerate multichannel growth before your competitors catch up.',
+    ctaLine: 'Would you be open to a quick call this week to review the best channels for your expansion?',
+  }
+}
+
+function createEmailVariants(match, tone = 'professional') {
+  const firstName = match?.decision_maker_name
+    ? String(match.decision_maker_name).split(' ')[0]
+    : 'there'
+  const score = Math.round(Number(match?.compatibility_score ?? 0))
+  const vertical = inferVertical(match)
+  const seasonal = seasonalContext()
+
+  const toneLines = {
+    professional: {
+      opener: `I am reaching out regarding a strong marketplace opportunity for ${match.seller_name}.`,
+      cta: 'Would you be open to a 20-minute call this week to review fit and next steps?',
+    },
+    direct: {
+      opener: `${match.seller_name} is a strong fit for ${match.marketplace_name}, and we should discuss activation quickly.`,
+      cta: 'Can we lock a 20-minute call this week?',
+    },
+    warm: {
+      opener: `I thought this would be highly relevant for ${match.seller_name} and wanted to share it with you.`,
+      cta: 'If useful, I would love to schedule a short 20-minute conversation.',
+    },
+  }[tone]
+
+  const rationale =
+    match.rationale ||
+    `Your brand positioning and category alignment look particularly strong for ${match.marketplace_name}.`
+
+  const products = splitValues(match['Top 3 products to push for each marketplace']).slice(0, 3)
+  const categories = match?.categories || match?.product_types_list || match?.marketplace_main_categories || 'your category'
+  const country = match?.country_origin ? `from ${match.country_origin}` : ''
+  const nbProducts = match?.nb_products ? `${Number(match.nb_products).toLocaleString()} products` : null
+  const avgPrice = match?.avg_price ? `avg price around €${Math.round(Number(match.avg_price))}` : null
+  const dataProof = [nbProducts, avgPrice].filter(Boolean).join(' · ')
+  const comm = match?.marketplace_commission_rate != null
+    ? `${Math.round(Number(match.marketplace_commission_rate) * 100)}% commission context`
+    : null
+  const traffic = match?.marketplace_monthly_traffic ? `${match.marketplace_monthly_traffic} monthly traffic` : null
+  const marketProof = [traffic, comm].filter(Boolean).join(' · ')
+  const seasonalHeadline =
+    seasonal.periodLabel === 'peak season' ? 'peak season' : seasonal.periodLabel === 'new-quarter planning' ? 'Q planning' : 'growth plan'
+
+  const subjectCandidates = [
+    { s: `Are you selling on ${match.marketplace_name}?`, w: 96 + (score >= 70 ? 10 : 0) },
+    { s: `${match.seller_name}: how to win ${seasonalHeadline}?`, w: 92 + (match.rationale ? 6 : 0) },
+    { s: `Scale ${match.seller_name} like top marketplace brands`, w: 88 + (marketProof ? 6 : 0) },
+    { s: `Still have products to publish on ${match.marketplace_name}?`, w: 85 + (products.length ? 8 : 0) },
+    { s: `${match.seller_name}: expand faster with Mirakl Connect`, w: 82 + score / 10 },
+    ...(vertical === 'home_garden'
+      ? [{ s: `Expand ${match.seller_name} across Europe’s Home & Garden marketplaces`, w: 100 }]
+      : []),
+  ]
+  const bestSubject = [...subjectCandidates].sort((a, b) => b.w - a.w)[0]?.s || `Are you selling on ${match.marketplace_name}?`
+
+  const sharedMiraklBullets = [
+    'Access 450+ Mirakl-powered marketplaces globally',
+    'Launch in days, not months, with AI-powered catalog adaptation',
+    'Prioritize channels where your assortment and margins fit best',
+  ]
+
+  const detailedLines = [
+    `Hi ${firstName},`,
+    '',
+    toneLines.opener,
+    '',
+    seasonal.urgencyLine,
+    '',
+    `For ${match.seller_name} ${country}, we see a strong opportunity on ${match.marketplace_name} (${score}/100 compatibility).`,
+    rationale,
+    ...(dataProof ? ['', `Brand data signal: ${dataProof}.`] : []),
+    ...(marketProof ? [`Marketplace signal: ${marketProof}.`] : []),
+    '',
+    'Why Mirakl Connect:',
+    ...sharedMiraklBullets.map((b) => `- ${b}`),
+    ...(products.length
+      ? [
+          '',
+          'Products to prioritize first:',
+          ...products.map((p) => `- ${p}`),
+        ]
+      : []),
+    '',
+    `Category focus: ${categories}.`,
+    toneLines.cta,
+    '',
+    'Best regards,',
+    '[Your Name]',
+    'Mirakl',
+  ]
+
+  const shortLines = [
+    `Hi ${firstName},`,
+    '',
+    `${match.seller_name} is a ${score}/100 fit for ${match.marketplace_name}.`,
+    `This can help accelerate your multichannel growth in ${categories}.`,
+    ...(products[0] ? [`First product priority: ${products[0]}.`] : []),
+    seasonal.ctaLine,
+    '',
+    '[Your Name]',
+    'Mirakl',
+  ]
+
+  return {
+    detailed: {
+      subject: bestSubject,
+      body: detailedLines.join('\n'),
+    },
+    short: {
+      subject: `${match.seller_name}: opportunity on ${match.marketplace_name}`,
+      body: shortLines.join('\n'),
+    },
+  }
+}
+
+function EmailEditorCard({
+  title,
+  variantKey,
+  draft,
+  onSubjectChange,
+  onBodyChange,
+  onRegenerate,
+  onSend,
+  canSend,
+  sent,
+}) {
   return (
-    <div className={`fixed bottom-6 right-6 z-50 ${base} text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3 min-w-[260px]`}>
-      <Icon size={17} className={toast.kind === 'info' ? 'animate-spin' : ''} />
-      <span className="text-sm font-medium flex-1">{toast.msg}</span>
-      <button onClick={onClose} className="opacity-70 hover:opacity-100"><X size={13} /></button>
+    <div className="card space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-text">{title}</h3>
+        {sent && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            <CheckCircle2 size={12} /> Sent
+          </span>
+        )}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">Subject</label>
+        <input
+          value={draft.subject}
+          onChange={(e) => onSubjectChange(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">Email body</label>
+        <textarea
+          value={draft.body}
+          onChange={(e) => onBodyChange(e.target.value)}
+          rows={11}
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onRegenerate(variantKey)}
+          className="btn-secondary inline-flex items-center gap-1.5 text-xs"
+        >
+          <Wand2 size={12} /> Regenerate
+        </button>
+        <button
+          onClick={() => onSend(variantKey)}
+          disabled={!canSend}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Send size={12} /> Send
+        </button>
+      </div>
     </div>
   )
 }
 
 export default function C2CampaignFollow() {
-  const [matches, setMatches]       = useState([])
-  const [emailsMap, setEmailsMap]   = useState({})
-  const [loading, setLoading]       = useState(true)
+  const [matches, setMatches] = useState([])
+  const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [search, setSearch]         = useState('')
-  const [tab, setTab]               = useState('all')
-  const [minScore, setMinScore]     = useState('')
-  const [selectedMatch, setSelectedMatch] = useState(null)
-  const [toast, setToast]           = useState(null)
-  const toastRef                    = useRef()
+  const [apolloRunning, setApolloRunning] = useState(false)
+  const [sellerById, setSellerById] = useState({})
+  const [search, setSearch] = useState('')
+  const [minScore, setMinScore] = useState('')
+  const [maxScore, setMaxScore] = useState('')
+  const [filterMarketplace, setFilterMarketplace] = useState('')
+  const [filterContact, setFilterContact] = useState('all')
+  const [filterReadiness, setFilterReadiness] = useState('')
+  const [page, setPage] = useState(1)
 
-  function showToast(kind, msg, ttl = 3500) {
+  const [selectedMatch, setSelectedMatch] = useState(null)
+  const [tone, setTone] = useState('professional')
+  const [drafts, setDrafts] = useState({ detailed: { subject: '', body: '' }, short: { subject: '', body: '' } })
+  const [sentFlags, setSentFlags] = useState({ detailed: false, short: false })
+
+  const [toast, setToast] = useState(null)
+
+  function notify(kind, msg) {
     setToast({ kind, msg })
-    clearTimeout(toastRef.current)
-    if (ttl) toastRef.current = setTimeout(() => setToast(null), ttl)
+    window.clearTimeout(window.__c2EmailToast)
+    window.__c2EmailToast = window.setTimeout(() => setToast(null), 2500)
   }
 
   async function loadAll() {
     setRefreshing(true)
-    const [m, e] = await Promise.all([fetchMatches({ limit: 1000 }), fetchEmails()])
-    setMatches((m.data ?? []).filter(match => Number(match.compatibility_score ?? 0) > 0))
-    const map = {}
-    for (const row of e.data) map[`${row.seller_id}|${row.marketplace_id}`] = row
-    setEmailsMap(map)
+    const [{ data }, { data: sellers }, { data: marketplaces }] = await Promise.all([
+      fetchMatches({ limit: 5000 }),
+      fetchSellers({ limit: 5000 }),
+      fetchMarketplaces(),
+    ])
+    const sellersById = Object.fromEntries((sellers ?? []).map((s) => [s.seller_id, s]))
+    const marketplacesById = Object.fromEntries((marketplaces ?? []).map((m) => [m.marketplace_id, m]))
+    setSellerById(sellersById)
+    const cleaned = (data ?? [])
+      .map((m) => {
+        const seller = sellersById[m.seller_id]
+        const contact = resolveLeadContact(m, seller)
+        const marketplace = marketplacesById[m.marketplace_id]
+        return {
+          ...m,
+          ...seller,
+          decision_maker_email: contact.email,
+          decision_maker_name: contact.name,
+          marketplace_main_categories: marketplace?.main_categories ?? null,
+          marketplace_countries: marketplace?.countries ?? null,
+          marketplace_monthly_traffic: marketplace?.monthly_traffic ?? null,
+          marketplace_commission_rate: marketplace?.commission_rate ?? null,
+        }
+      })
+      .filter((m) => Number(m.compatibility_score ?? 0) > 0)
+      .sort((a, b) => (b.compatibility_score ?? 0) - (a.compatibility_score ?? 0))
+    setMatches(cleaned)
     setLoading(false)
     setRefreshing(false)
   }
 
   useEffect(() => {
     loadAll()
-    const iv = setInterval(loadAll, AUTO_REFRESH)
-    return () => clearInterval(iv)
   }, [])
 
-  const stats = useMemo(() => ({
-    total:   matches.length,
-    active:  matches.filter(m => m.statut === 'sequence_en_cours').length,
-    done:    matches.filter(m => m.statut === 'sequence_terminee').length,
-    withEmails: Object.keys(emailsMap).length,
-    ready:   matches.filter(m => sendReadiness(m) === 'ready').length,
-  }), [matches, emailsMap])
-
-  // Funnel data
-  const funnelData = [
-    { name: 'Matched',      value: stats.total,      fill: '#2563EB' },
-    { name: 'With emails',  value: stats.withEmails, fill: '#3b82f6' },
-    { name: 'Ready',        value: stats.ready,      fill: '#60a5fa' },
-    { name: 'Active',       value: stats.active,     fill: '#10b981' },
-    { name: 'Done',         value: stats.done,       fill: '#059669' },
-  ]
-
-  const tabCounts = useMemo(() => {
-    const c = { all: matches.length, failed: 0 }
-    for (const m of matches) {
-      c[m.statut] = (c[m.statut] ?? 0) + 1
-      if (['generation_failed', 'enrichment_failed'].includes(m.statut)) c.failed++
-    }
-    return c
+  const marketplaces = useMemo(() => {
+    return [...new Set(matches.map((m) => m.marketplace_name).filter(Boolean))].sort()
   }, [matches])
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase()
-    return matches.filter(m => {
-      if (tab !== 'all') {
-        if (tab === 'failed') { if (!['generation_failed', 'enrichment_failed'].includes(m.statut)) return false }
-        else if (m.statut !== tab) return false
-      }
-      if (minScore !== '' && (m.compatibility_score ?? 0) < parseFloat(minScore)) return false
-      if (s) {
-        const hay = `${m.seller_name ?? ''} ${m.marketplace_name ?? ''} ${m.decision_maker_name ?? ''}`.toLowerCase()
-        if (!hay.includes(s)) return false
-      }
-      return true
+    return matches.filter((m) => {
+      if (filterMarketplace && m.marketplace_name !== filterMarketplace) return false
+      if (filterContact === 'with' && !m.decision_maker_email) return false
+      if (filterContact === 'missing' && !!m.decision_maker_email) return false
+      if (filterReadiness && sendReadiness(m) !== filterReadiness) return false
+      if (minScore !== '' && (m.compatibility_score ?? 0) < Number(minScore)) return false
+      if (maxScore !== '' && (m.compatibility_score ?? 0) > Number(maxScore)) return false
+      if (!s) return true
+      const hay = `${m.seller_name ?? ''} ${m.marketplace_name ?? ''} ${m.decision_maker_name ?? ''}`.toLowerCase()
+      return hay.includes(s)
     })
-  }, [matches, search, tab, minScore])
+  }, [matches, search, minScore, maxScore, filterMarketplace, filterContact, filterReadiness])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, minScore, maxScore, filterMarketplace, filterContact, filterReadiness])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, page])
+
+  useEffect(() => {
+    if (!selectedMatch) return
+    const fresh = createEmailVariants(selectedMatch, tone)
+    setDrafts(fresh)
+    setSentFlags({ detailed: false, short: false })
+  }, [selectedMatch, tone])
+
+  function updateDraft(kind, field, value) {
+    setDrafts((prev) => ({
+      ...prev,
+      [kind]: { ...prev[kind], [field]: value },
+    }))
+  }
+
+  function regenerate(kind) {
+    if (!selectedMatch) return
+    const fresh = createEmailVariants(selectedMatch, tone)
+    setDrafts((prev) => ({ ...prev, [kind]: fresh[kind] }))
+    notify('info', `${kind === 'detailed' ? 'Detailed' : 'Short'} email regenerated.`)
+  }
+
+  function sendEmail(kind) {
+    if (!selectedMatch?.decision_maker_email) {
+      notify('error', 'No decision-maker email available for this lead.')
+      return
+    }
+    const draft = drafts[kind]
+    const mailto = `mailto:${selectedMatch.decision_maker_email}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`
+    window.location.href = mailto
+    setSentFlags((prev) => ({ ...prev, [kind]: true }))
+    notify('success', `${kind === 'detailed' ? 'Detailed' : 'Short'} email ready to send.`)
+  }
+
+  const withContact = matches.filter((m) => !!m.decision_maker_email).length
+  const hasAdvancedFilters =
+    minScore !== '' ||
+    maxScore !== '' ||
+    filterMarketplace !== '' ||
+    filterContact !== 'all' ||
+    filterReadiness !== ''
+
+  function resetFilters() {
+    setMinScore('')
+    setMaxScore('')
+    setFilterMarketplace('')
+    setFilterContact('all')
+    setFilterReadiness('')
+  }
+
+  async function runApolloContactFinder() {
+    setApolloRunning(true)
+    const beforeMissing = matches.filter((m) => !m.decision_maker_email).length
+    // Placeholder local enrichment trigger: tries to re-attach seller contacts.
+    setMatches((prev) =>
+      prev.map((m) => {
+        if (m.decision_maker_email) return m
+        const seller = sellerById[m.seller_id]
+        const contact = resolveLeadContact(m, seller)
+        if (!contact.email) return m
+        return {
+          ...m,
+          decision_maker_email: contact.email,
+          decision_maker_name: contact.name,
+        }
+      }),
+    )
+    const afterMissing = matches
+      .map((m) => {
+        if (m.decision_maker_email) return m
+        const seller = sellerById[m.seller_id]
+        const contact = resolveLeadContact(m, seller)
+        if (!contact.email) return m
+        return { ...m, decision_maker_email: contact.email }
+      })
+      .filter((m) => !m.decision_maker_email).length
+    const found = Math.max(0, beforeMissing - afterMissing)
+    setApolloRunning(false)
+    notify('info', found > 0 ? `Apollo lookup completed: ${found} contacts attached.` : 'Apollo lookup completed: no new contacts found.')
+  }
 
   return (
     <div className="space-y-5">
-      <Toast toast={toast} onClose={() => setToast(null)} />
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-sm font-medium text-white shadow-2xl ${
+            toast.kind === 'error' ? 'bg-red-600' : toast.kind === 'info' ? 'bg-[#1B3A5C]' : 'bg-emerald-600'
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-text">Email Generation</h1>
-          <p className="text-sm text-muted mt-0.5">Variant selection · Sequence launch · Funnel tracking</p>
+          <p className="text-sm text-muted mt-0.5">
+            Sales workspace: review, modify, regenerate, and send both generated email variants.
+          </p>
         </div>
-        <button onClick={loadAll} disabled={refreshing} className="btn-secondary flex items-center gap-2">
-          <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
-        </button>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'Matched pairs',    value: stats.total,      color: 'bg-blue-50 text-blue-600' },
-          { label: 'Emails generated', value: stats.withEmails, color: 'bg-purple-50 text-purple-600' },
-          { label: 'Ready to send',    value: stats.ready,      color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Active sequences', value: stats.active,     color: 'bg-indigo-50 text-indigo-600' },
-          { label: 'Completed',        value: stats.done,       color: 'bg-gray-100 text-gray-600' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="card">
-            <div className={`text-2xl font-bold ${color.split(' ')[1]}`}>{value}</div>
-            <div className="text-xs text-muted">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Funnel chart */}
-      {!loading && (
-        <div className="card">
-          <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Campaign funnel</div>
-          <div className="flex gap-4 items-center">
-            {funnelData.map((f, i) => (
-              <div key={f.name} className="flex-1 text-center">
-                <div className="rounded-lg py-2" style={{ background: `${f.fill}20`, borderLeft: `3px solid ${f.fill}` }}>
-                  <div className="text-xl font-bold" style={{ color: f.fill }}>{f.value}</div>
-                  <div className="text-xs text-muted">{f.name}</div>
-                </div>
-                {i < funnelData.length - 1 && (
-                  <div className="text-[10px] text-gray-300 mt-1">
-                    {funnelData[i + 1].value > 0 && f.value > 0
-                      ? `${Math.round((funnelData[i + 1].value / f.value) * 100)}%`
-                      : '—'}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {STATUS_TABS.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${tab === t.key ? 'bg-[#2563EB] text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {t.label}
-            <span className={`text-[10px] px-1.5 rounded-full min-w-[1.2rem] text-center ${tab === t.key ? 'bg-white/20' : 'bg-white/60 text-gray-500'}`}>
-              {tabCounts[t.key] ?? 0}
-            </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={runApolloContactFinder}
+            disabled={apolloRunning}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#1B3A5C] px-3 py-2 text-xs font-semibold text-white hover:bg-[#15304e] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Wand2 size={13} className={apolloRunning ? 'animate-spin' : ''} />
+            {apolloRunning ? 'Running Apollo…' : 'Run Apollo Contact Finder'}
           </button>
-        ))}
+          <button onClick={loadAll} disabled={refreshing} className="btn-secondary inline-flex items-center gap-2">
+            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
-      {/* Filter bar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="card"><div className="text-2xl font-bold text-[#2563EB]">{matches.length}</div><div className="text-xs text-muted">Sales leads</div></div>
+        <div className="card"><div className="text-2xl font-bold text-emerald-600">{withContact}</div><div className="text-xs text-muted">With contact email</div></div>
+        <div className="card"><div className="text-2xl font-bold text-indigo-600">{filtered.length}</div><div className="text-xs text-muted">Filtered leads</div></div>
+        <div className="card"><div className="text-2xl font-bold text-purple-600">2</div><div className="text-xs text-muted">Email variants per lead</div></div>
+      </div>
+
       <div className="card flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search seller, marketplace, contact..."
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20" />
+            className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
+          />
         </div>
-        <select value={minScore} onChange={e => setMinScore(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none">
+        <select
+          value={minScore}
+          onChange={(e) => setMinScore(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+        >
           <option value="">All scores</option>
-          <option value="90">≥ 90</option>
-          <option value="80">≥ 80</option>
-          <option value="70">≥ 70</option>
+          <option value="70">&gt;= 70</option>
+          <option value="80">&gt;= 80</option>
+          <option value="90">&gt;= 90</option>
         </select>
-        <span className="text-xs text-muted"><b className="text-text">{filtered.length}</b> / {matches.length}</span>
-      </div>
-
-      {/* Table */}
-      <div className="card p-0 overflow-hidden">
-        {loading ? (
-          <div className="p-10 text-center text-muted text-sm">Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-10 text-center text-muted text-sm">No results.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  <th className="px-4 py-3">Seller × Marketplace</th>
-                  <th className="px-4 py-3 text-right">Score</th>
-                  <th className="px-4 py-3">Decision maker</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Emails</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.slice(0, 200).map(m => {
-                  const k = `${m.seller_id}|${m.marketplace_id}`
-                  const email = emailsMap[k]
-                  const variants = email ? [email.selected_variant_j0, email.selected_variant_j3, email.selected_variant_j6].filter(Boolean).length : 0
-                  return (
-                    <tr key={k} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-text text-xs">{m.seller_name}</div>
-                        <div className="text-xs text-muted flex items-center gap-1"><Building2 size={10} /> {m.marketplace_name}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${fitBandColor(m.compatibility_score)}`}>
-                          {m.compatibility_score != null ? Number(m.compatibility_score).toFixed(1) : '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {m.decision_maker_name
-                          ? <div>
-                              <div className="text-xs font-medium text-text">{m.decision_maker_name}</div>
-                              <div className="text-xs text-muted truncate max-w-[200px]">{m.decision_maker_title}</div>
-                            </div>
-                          : <span className="text-xs text-gray-400 italic">Not enriched</span>}
-                      </td>
-                      <td className="px-4 py-3"><StatusBadge statut={m.statut} /></td>
-                      <td className="px-4 py-3">
-                        {email
-                          ? <span className="text-xs text-muted">{variants}/3 variants</span>
-                          : <span className="text-xs text-gray-400 italic">Not generated</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => setSelectedMatch({ ...m, email })} disabled={!email}
-                          className="text-xs btn-secondary disabled:opacity-40 disabled:cursor-not-allowed">
-                          View emails
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <input
+          value={maxScore}
+          onChange={(e) => setMaxScore(e.target.value)}
+          type="number"
+          min="0"
+          max="100"
+          placeholder="Max score"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+        />
+        <select
+          value={filterMarketplace}
+          onChange={(e) => setFilterMarketplace(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+        >
+          <option value="">All marketplaces</option>
+          {marketplaces.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+        <select
+          value={filterReadiness}
+          onChange={(e) => setFilterReadiness(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+        >
+          <option value="">All readiness</option>
+          <option value="ready">Ready</option>
+          <option value="missing_contact">Missing contact</option>
+          <option value="in_campaign">In campaign</option>
+        </select>
+        <select
+          value={filterContact}
+          onChange={(e) => setFilterContact(e.target.value)}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+        >
+          <option value="all">All contacts</option>
+          <option value="with">With contact</option>
+          <option value="missing">Missing contact</option>
+        </select>
+        <button
+          onClick={resetFilters}
+          disabled={!hasAdvancedFilters}
+          className="btn-secondary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Reset filters
+        </button>
       </div>
 
       {selectedMatch && (
-        <EmailDrawer
-          match={selectedMatch}
-          onClose={() => setSelectedMatch(null)}
-          onEmailUpdate={newEmail => {
-            const k = `${newEmail.seller_id}|${newEmail.marketplace_id}`
-            setEmailsMap(m => ({ ...m, [k]: newEmail }))
-            setSelectedMatch(sm => sm ? { ...sm, email: newEmail } : sm)
-          }}
-          onLaunched={(sid, mid) => {
-            setMatches(prev => prev.map(x => x.seller_id === sid && x.marketplace_id === mid ? { ...x, statut: 'sequence_en_cours' } : x))
-            showToast('success', '🚀 Sequence launched!')
-          }}
-          showToast={showToast}
-        />
-      )}
-    </div>
-  )
-}
-
-function EmailDrawer({ match, onClose, onEmailUpdate, onLaunched, showToast }) {
-  const [sel, setSel] = useState({ j0: match.email?.selected_variant_j0 ?? null, j3: match.email?.selected_variant_j3 ?? null, j6: match.email?.selected_variant_j6 ?? null })
-  const [saving, setSaving] = useState(null)
-  const [launching, setLaunching] = useState(false)
-  const allSelected = sel.j0 && sel.j3 && sel.j6
-  const canLaunch = allSelected && !launching && !['sequence_en_cours','sequence_terminee'].includes(match.statut)
-
-  useEffect(() => {
-    const esc = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', esc)
-    return () => window.removeEventListener('keydown', esc)
-  }, [onClose])
-
-  async function saveSel(phaseKey, variant) {
-    setSel(s => ({ ...s, [phaseKey]: variant }))
-    setSaving(phaseKey)
-    const { data, error } = await saveEmailSelection({
-      sellerId: match.seller_id,
-      marketplaceId: match.marketplace_id,
-      phaseKey,
-      variant,
-    })
-    setSaving(null)
-    if (error) showToast('error', error.message)
-    else if (data) onEmailUpdate(data)
-  }
-
-  async function launch() {
-    setLaunching(true)
-    showToast('info', 'Launching sequence locally…', 0)
-    try {
-      await markSequenceInProgress({ sellerId: match.seller_id, marketplaceId: match.marketplace_id })
-      onLaunched(match.seller_id, match.marketplace_id)
-      onClose()
-    } catch (e) {
-      showToast('error', `Launch failed: ${e.message}`)
-    } finally {
-      setLaunching(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="relative w-full max-w-6xl bg-white shadow-2xl overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-text">{match.seller_name}</h2>
-              <span className="text-muted">×</span>
-              <span className="font-semibold text-[#2563EB] flex items-center gap-1"><Building2 size={14} /> {match.marketplace_name}</span>
-              <StatusBadge statut={match.statut} />
-            </div>
-            {match.decision_maker_name && (
-              <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-2">
-                <span className="font-medium text-text">{match.decision_maker_name}</span>
-                {match.decision_maker_title && <span>· {match.decision_maker_title}</span>}
-                {match.decision_maker_email && <a href={`mailto:${match.decision_maker_email}`} className="text-[#2563EB] hover:underline">{match.decision_maker_email}</a>}
-                {match.decision_maker_linkedin && <a href={match.decision_maker_linkedin} target="_blank" rel="noopener noreferrer" className="text-[#0A66C2]"><Linkedin size={12} /></a>}
+        <div className="space-y-4">
+          <div className="card">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-lg font-bold text-text">{selectedMatch.seller_name}</h2>
+                <p className="text-sm text-muted">{selectedMatch.marketplace_name}</p>
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={launch} disabled={!canLaunch}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${canLaunch ? 'bg-[#E8445A] text-white hover:bg-[#d03b4f] shadow' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-              title={!allSelected ? 'Select all 3 variants first' : ''}>
-              {launching ? <Loader2 size={15} className="animate-spin" /> : <Rocket size={15} />}
-              {launching ? 'Launching…' : 'Launch Sequence'}
-            </button>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={17} /></button>
-          </div>
-        </div>
-
-        {match.rationale && (
-          <div className="px-6 pt-4">
-            <div className="rounded-xl bg-[#2563EB]/5 border border-[#2563EB]/10 p-4">
-              <div className="text-xs font-semibold text-[#2563EB] uppercase tracking-wide mb-1">Why this match?</div>
-              <p className="text-sm text-text leading-relaxed">{match.rationale}</p>
+              <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
+                {['professional', 'direct', 'warm'].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTone(t)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                      tone === t ? 'bg-[#2563EB] text-white' : 'text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        )}
 
-        {!match.email ? (
-          <div className="p-12 text-center text-muted"><Mail size={32} className="mx-auto mb-3 text-gray-300" /><p>No emails generated for this match yet.</p></div>
-        ) : (
-          <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {PHASES.map(p => <PhaseCard key={p.key} phase={p} email={match.email} selected={sel[p.key]} saving={saving === p.key} onSelect={v => saveSel(p.key, v)} />)}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <EmailEditorCard
+              title="Detailed Personalized Email"
+              variantKey="detailed"
+              draft={drafts.detailed}
+              onSubjectChange={(v) => updateDraft('detailed', 'subject', v)}
+              onBodyChange={(v) => updateDraft('detailed', 'body', v)}
+              onRegenerate={regenerate}
+              onSend={sendEmail}
+              canSend={!!selectedMatch.decision_maker_email}
+              sent={sentFlags.detailed}
+            />
+
+            <EmailEditorCard
+              title="Short High-Conviction Email"
+              variantKey="short"
+              draft={drafts.short}
+              onSubjectChange={(v) => updateDraft('short', 'subject', v)}
+              onBodyChange={(v) => updateDraft('short', 'body', v)}
+              onRegenerate={regenerate}
+              onSend={sendEmail}
+              canSend={!!selectedMatch.decision_maker_email}
+              sent={sentFlags.short}
+            />
           </div>
+        </div>
+      )}
+
+      <div className="card p-0 overflow-hidden">
+        {loading ? (
+          <div className="p-10 text-center text-sm text-muted">Loading leads…</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-10 text-center text-sm text-muted">No leads found.</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-3">Seller × Marketplace</th>
+                    <th className="px-4 py-3 text-right">Score</th>
+                    <th className="px-4 py-3">Contact</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.map((m) => {
+                    const selected =
+                      selectedMatch?.seller_id === m.seller_id &&
+                      selectedMatch?.marketplace_id === m.marketplace_id
+                    return (
+                      <tr
+                        key={`${m.seller_id}|${m.marketplace_id}`}
+                        className={`border-t border-gray-100 ${selected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="text-xs font-medium text-text">{m.seller_name}</div>
+                          <div className="text-xs text-muted inline-flex items-center gap-1"><Building2 size={10} /> {m.marketplace_name}</div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${fitBandColor(m.compatibility_score)}`}>
+                            {Number(m.compatibility_score ?? 0).toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {m.decision_maker_email ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><Mail size={11} /> Email available</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-red-500"><AlertCircle size={11} /> Missing</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => setSelectedMatch(m)}
+                            className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1d4ed8]"
+                          >
+                            Review emails
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="btn-secondary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-muted">Page {page} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="btn-secondary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </>
         )}
-      </motion.div>
-    </div>
-  )
-}
-
-function PhaseCard({ phase, email, selected, saving, onSelect }) {
-  const [variant, setVariant] = useState(selected ?? 'bref')
-  useEffect(() => { if (selected) setVariant(selected) }, [selected])
-
-  const objet = email[`phase_${phase.phase}_${variant}_objet`]
-  const html  = email[`phase_${phase.phase}_${variant}_html`]
-  const brefOk = !!email[`phase_${phase.phase}_bref_html`]
-  const fullOk = !!email[`phase_${phase.phase}_full_html`]
-
-  return (
-    <div className={`rounded-xl border-2 overflow-hidden flex flex-col ${selected ? 'border-[#2563EB]' : 'border-gray-200'}`}>
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock size={13} className="text-[#2563EB]" />
-          <span className="font-bold text-text text-xs">{phase.label}</span>
-          <span className="text-xs text-muted">· {phase.sub}</span>
-        </div>
-        {selected && <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-medium flex items-center gap-1"><CheckCircle2 size={10} /> {selected}</span>}
       </div>
 
-      <div className="px-4 pt-3 flex gap-2">
-        {['bref', 'full'].map(v => (
-          <button key={v} onClick={() => setVariant(v)} disabled={(v === 'bref' && !brefOk) || (v === 'full' && !fullOk)}
-            className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${variant === v ? 'bg-[#2563EB] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} disabled:opacity-40 disabled:cursor-not-allowed`}>
-            {v.charAt(0).toUpperCase() + v.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      <div className="px-4 pt-2">
-        <div className="text-[10px] font-semibold text-gray-400 uppercase mb-0.5">Subject</div>
-        <div className="text-xs text-text font-medium line-clamp-2">{objet ?? <span className="italic text-gray-400">No subject</span>}</div>
-      </div>
-
-      <div className="px-4 pt-2 pb-1 flex-1">
-        <div className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Preview</div>
-        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden h-[240px]">
-          {html
-            ? <iframe title={`phase-${phase.phase}-${variant}`} sandbox="" srcDoc={html} className="w-full h-full border-0" />
-            : <div className="h-full flex items-center justify-center text-xs text-gray-400 italic">No HTML content</div>}
-        </div>
-      </div>
-
-      <div className="px-4 pb-4 pt-2">
-        <button onClick={() => onSelect(variant)} disabled={saving}
-          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all ${selected === variant ? 'bg-emerald-600 text-white' : 'bg-[#2563EB] text-white hover:bg-[#1d4ed8]'} disabled:opacity-60`}>
-          {saving ? <><Loader2 size={12} className="animate-spin" /> Saving…</>
-          : selected === variant ? <><CheckCircle2 size={12} /> "{variant}" selected</>
-          : <>Select "{variant}" for {phase.label}</>}
-        </button>
-      </div>
     </div>
   )
 }

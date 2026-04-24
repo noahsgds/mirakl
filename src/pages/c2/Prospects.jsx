@@ -44,6 +44,11 @@ export default function C2Prospects() {
   const [selected, setSelected]     = useState(null)
   const [filterTier, setFilterTier] = useState('')
   const [filterCountry, setFilterCountry] = useState('')
+  const [filterContact, setFilterContact] = useState('all')
+  const [filterWebsite, setFilterWebsite] = useState('all')
+  const [filterInternational, setFilterInternational] = useState('all')
+  const [minMatches, setMinMatches] = useState('')
+  const [minEnrichment, setMinEnrichment] = useState('')
   const [page, setPage]             = useState(1)
   const [showAdd, setShowAdd]       = useState(false)
   const [scraping, setScraping]     = useState(false)
@@ -74,17 +79,25 @@ export default function C2Prospects() {
     return sellers.filter(seller => {
       if (filterTier    && seller.brand_tier     !== filterTier)    return false
       if (filterCountry && seller.country_origin !== filterCountry) return false
+      if (filterContact === 'with' && !seller.contact_email) return false
+      if (filterContact === 'missing' && !!seller.contact_email) return false
+      if (filterWebsite === 'with' && !seller.seller_url) return false
+      if (filterWebsite === 'missing' && !!seller.seller_url) return false
+      if (filterInternational === 'yes' && !seller.ships_international) return false
+      if (filterInternational === 'no' && seller.ships_international) return false
+      if (minMatches !== '' && (matchCounts[seller.seller_id] ?? 0) < Number(minMatches)) return false
+      if (minEnrichment !== '' && enrichmentScore(seller) < Number(minEnrichment)) return false
       if (s) {
         const hay = `${seller.seller_name ?? ''} ${seller.brand_name ?? ''} ${seller.seller_url ?? ''}`.toLowerCase()
         if (!hay.includes(s)) return false
       }
       return true
     })
-  }, [sellers, search, filterTier, filterCountry])
+  }, [sellers, search, filterTier, filterCountry, filterContact, filterWebsite, filterInternational, minMatches, minEnrichment, matchCounts])
 
   useEffect(() => {
     setPage(1)
-  }, [search, filterTier, filterCountry])
+  }, [search, filterTier, filterCountry, filterContact, filterWebsite, filterInternational, minMatches, minEnrichment])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
@@ -138,6 +151,25 @@ export default function C2Prospects() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'prospects.csv'; a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const hasAdvancedFilters =
+    filterTier !== '' ||
+    filterCountry !== '' ||
+    filterContact !== 'all' ||
+    filterWebsite !== 'all' ||
+    filterInternational !== 'all' ||
+    minMatches !== '' ||
+    minEnrichment !== ''
+
+  function resetFilters() {
+    setFilterTier('')
+    setFilterCountry('')
+    setFilterContact('all')
+    setFilterWebsite('all')
+    setFilterInternational('all')
+    setMinMatches('')
+    setMinEnrichment('')
   }
 
   return (
@@ -225,6 +257,48 @@ export default function C2Prospects() {
               <option value="">All countries</option>
               {countries.map(c => <option key={c}>{c}</option>)}
             </select>
+            <select value={filterContact} onChange={e => setFilterContact(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20">
+              <option value="all">All contacts</option>
+              <option value="with">With contact</option>
+              <option value="missing">Missing contact</option>
+            </select>
+            <select value={filterWebsite} onChange={e => setFilterWebsite(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20">
+              <option value="all">All websites</option>
+              <option value="with">With website</option>
+              <option value="missing">No website</option>
+            </select>
+            <select value={filterInternational} onChange={e => setFilterInternational(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20">
+              <option value="all">Ships intl: all</option>
+              <option value="yes">Ships international</option>
+              <option value="no">Domestic only</option>
+            </select>
+            <input
+              value={minMatches}
+              onChange={e => setMinMatches(e.target.value)}
+              type="number"
+              min="0"
+              placeholder="Min matches"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
+            />
+            <input
+              value={minEnrichment}
+              onChange={e => setMinEnrichment(e.target.value)}
+              type="number"
+              min="0"
+              max="100"
+              placeholder="Min enrichment %"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
+            />
+            <button
+              onClick={resetFilters}
+              disabled={!hasAdvancedFilters}
+              className="btn-secondary text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Reset filters
+            </button>
             <span className="self-center text-xs text-muted">{filtered.length} / {sellers.length}</span>
           </div>
 
