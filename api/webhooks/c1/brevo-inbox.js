@@ -44,7 +44,6 @@ function extractFields(event) {
     event?.identifiers?.email_id ||
     event?.email ||
     event?.from?.email ||
-    event?.items?.[0]?.From?.Address ||
     ''
   ).trim().toLowerCase()
 
@@ -52,28 +51,24 @@ function extractFields(event) {
     msg?.from?.name ||
     event?.visitor?.displayedName ||
     event?.from?.name ||
-    event?.items?.[0]?.From?.Name ||
     ''
   ).trim()
 
   const subject = String(
     msg?.subject ||
     event?.subject ||
-    event?.items?.[0]?.Subject ||
     ''
   ).trim()
 
   const htmlRaw = String(
     msg?.html ||
     event?.html ||
-    event?.items?.[0]?.Html ||
     ''
   ).trim()
 
   const text = String(
     msg?.text ||
     event?.text ||
-    event?.items?.[0]?.Text ||
     (htmlRaw ? stripHtml(htmlRaw) : '')
   ).trim()
 
@@ -96,12 +91,12 @@ export default async function handler(req, res) {
 
   // ── GET : affiche les 10 derniers messages reçus (debug rapide) ─────────
   if (req.method === 'GET') {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('brevo_messages')
-      .select('id, received_at, from_email, from_name, subject, text_content')
+      .select('id, received_at, seller_id, from_email, from_name, subject, text_content')
       .order('received_at', { ascending: false })
       .limit(10)
-    return res.status(200).json({ ok: true, last_messages: data || [] })
+    return res.status(200).json({ ok: true, last_messages: data || [], dbError: error?.message || null })
   }
 
   if (req.method !== 'POST') {
@@ -125,33 +120,17 @@ export default async function handler(req, res) {
         skipped: true,
         reason: 'no_email_found',
         payloadKeys: Object.keys(event),
-        messagesCount: event?.messages?.length ?? 0,
       })
       continue
     }
 
-    // ── 1. Trouver le seller par email ──────────────────────────────────
-    const { data: leadRows, error: lookupErr } = await supabase
-      .from('seller_qualification')
-      .select('seller_id, notes')
-      .ilike('decision_maker_email', email)
-      .limit(1)
-
-    if (lookupErr) {
-      results.push({ matched: false, reason: 'db_lookup_error', error: lookupErr.message, email })
-      continue
-    }
-    if (!leadRows?.length) {
-      results.push({ matched: false, reason: 'unknown_sender', email })
-      continue
-    }
-
-    const sellerId = leadRows[0].seller_id
     const nowIso = new Date().toISOString()
 
-    // ── 2. Stocker le message dans brevo_messages (toujours, même si la suite échoue) ──
+    // ── 1. Toujours stocker dans brevo_messages (seller_id nullable) ─────
+    // seller_id sera mis à jour si on trouve le seller — le message n'est
+    // jamais perdu même si l'email n'est pas reconnu.
     const { error: msgErr } = await supabase.from('brevo_messages').insert({
-      seller_id:    sellerId,
+      seller_id:    null,   // mis à jour ci-dessous si seller trouvé
       received_at:  nowIso,
       from_email:   email,
       from_name:    name || null,
@@ -161,7 +140,39 @@ export default async function handler(req, res) {
       raw_payload:  event,
     })
 
-    // ── 3. Mettre à jour seller_qualification ───────────────────────────
+    if (msgErr) {
+      results.push({ email, msgInserted: false, msgError: msgErr.message })
+      continue
+    }
+
+    // ── 2. Chercher le seller par email ──────────────────────────────────
+    const { data: leadRows, error: lookupErr } = await supabase
+      .from('seller_qualification')
+      .select('seller_id, notes')
+      .ilike('decision_maker_email', email)
+      .limit(1)
+
+    if (lookupErr || !leadRows?.length) {
+      results.push({
+        email,
+        msgInserted: true,
+        matched: false,
+        reason: lookupErr ? 'db_lookup_error' : 'unknown_sender',
+        error: lookupErr?.message || null,
+      })
+      continue
+    }
+
+    const sellerId = leadRows[0].seller_id
+
+    // ── 3. Mettre à jour seller_id dans le message qu'on vient d'insérer ─
+    await supabase
+      .from('brevo_messages')
+      .update({ seller_id: sellerId })
+      .eq('from_email', email)
+      .eq('received_at', nowIso)
+
+    // ── 4. Mettre à jour seller_qualification ───────────────────────────
     const snippet = text.slice(0, 1200)
     const noteEntry = [`[${nowIso}] Réponse Brevo${name ? ` de ${name}` : ''}${subject ? ` — ${subject}` : ''}`, snippet || '(pas de texte)'].join('\n')
     const updatedNotes = leadRows[0].notes ? `${leadRows[0].notes}\n\n---\n\n${noteEntry}` : noteEntry
@@ -171,7 +182,7 @@ export default async function handler(req, res) {
       .update({ statut: 'REPLIED', notes: updatedNotes })
       .eq('seller_id', sellerId)
 
-    // ── 4. Mettre à jour seller_sequence ────────────────────────────────
+    // ── 5. Mettre à jour seller_sequence ────────────────────────────────
     const { data: seqRows, error: seqErr } = await supabase
       .from('seller_sequence')
       .update({ replied: true, statut_sequence: 'sequence_en_cours' })
@@ -187,13 +198,12 @@ export default async function handler(req, res) {
     }
 
     results.push({
-      matched:      true,
+      matched:     true,
       sellerId,
       email,
-      msgInserted:  !msgErr,
-      msgError:     msgErr?.message || null,
-      qualUpdated:  !qualErr,
-      qualError:    qualErr?.message || null,
+      msgInserted: true,
+      qualUpdated: !qualErr,
+      qualError:   qualErr?.message || null,
     })
   }
 
