@@ -18,105 +18,93 @@ const cors = {
 }
 
 // ---------------------------------------------------------------------------
-// Brevo outbound webhook payload formats
+// Brevo Conversations outbound webhook (confirmed payload format):
+// {
+//   source: "Conversations",
+//   messages: [{ from: { email, name }, html, subject }],
+//   identifiers: { email_id },
+//   visitor: { displayedName },
+//   event_name: "conversation_ended" | "new_message" | …
+// }
+//
+// Also handles:
+// B) Transactional email events: { event, email, subject, text, … }
+// C) Inbound parsing: { items: [{ From: { Address, Name }, Subject, Text }] }
+// D) Batch: array of any of the above
 // ---------------------------------------------------------------------------
-// A) Transactional email events (opened, clicked, replied, inbound_email…)
-//    { event, email, subject, text, from, messageId, date, … }
-//    Note: `email` = the CONTACT's email (recipient of your outbound email)
-//
-// B) Brevo Conversations — new message from a visitor
-//    { type, data: { author: { email, name }, text, conversation: { subject } } }
-//    OR { event, data: { message: { sender: { email, name }, content } } }
-//    OR { visitors: [{ email }], message: { text }, conversationId }
-//
-// C) Inbound email parsing (items array — separate Brevo Inbound Parsing product)
-//    { items: [{ From: { Address, Name }, Subject, Text, Html }] }
-//
-// D) Batch mode: Brevo may wrap events in an array
-//    [ { event, email, … }, … ]
-// ---------------------------------------------------------------------------
+
+function stripHtml(html) {
+  return String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
 
 function extractFields(obj) {
   if (!obj || typeof obj !== 'object') return { email: '', name: '', subject: '', text: '', html: '' }
 
+  const firstMsg = Array.isArray(obj?.messages) ? obj.messages[0] : null
+
   // --- EMAIL ---
   const email = (
-    // Transactional: contact email
+    // Brevo Conversations: sender is in messages[0].from.email
+    firstMsg?.from?.email ||
+    // Brevo Conversations: alternative identifier
+    obj?.identifiers?.email_id ||
+    // Transactional email events
     obj?.email ||
-    // Conversations: author/visitor/sender
+    // Generic Conversations formats
     obj?.data?.author?.email ||
     obj?.data?.visitor?.email ||
     obj?.data?.message?.sender?.email ||
-    obj?.payload?.message?.sender?.email ||
-    obj?.data?.senderEmail ||
-    obj?.senderEmail ||
     obj?.visitorEmail ||
-    // visitors array (some Conversations webhooks)
-    (Array.isArray(obj?.visitors) && obj.visitors[0]?.email ? obj.visitors[0].email : null) ||
-    (Array.isArray(obj?.visitors) && typeof obj.visitors[0] === 'string' ? obj.visitors[0] : null) ||
+    obj?.senderEmail ||
     // Inbound parsing
     obj?.items?.[0]?.From?.Address ||
-    obj?.items?.[0]?.from?.email ||
-    // Generic fallbacks
+    // Fallbacks
     obj?.from?.email ||
     obj?.sender?.email ||
-    obj?.data?.from?.email ||
     obj?.contact?.email ||
     ''
   )
 
   // --- NAME ---
   const name = (
+    firstMsg?.from?.name ||
+    obj?.visitor?.displayedName ||
     obj?.data?.author?.name ||
     obj?.data?.visitor?.name ||
-    obj?.data?.message?.sender?.name ||
-    obj?.payload?.message?.sender?.name ||
     obj?.visitorName ||
     obj?.senderName ||
-    (Array.isArray(obj?.visitors) && obj.visitors[0]?.name ? obj.visitors[0].name : null) ||
     obj?.items?.[0]?.From?.Name ||
     obj?.from?.name ||
-    obj?.sender?.name ||
     ''
   )
 
   // --- SUBJECT ---
   const subject = (
+    firstMsg?.subject ||
     obj?.subject ||
-    obj?.Subject ||
     obj?.data?.conversation?.subject ||
-    obj?.conversation?.subject ||
     obj?.items?.[0]?.Subject ||
-    obj?.items?.[0]?.subject ||
-    ''
-  )
-
-  // --- TEXT ---
-  const text = (
-    // Transactional inbound
-    obj?.text ||
-    // Conversations
-    obj?.data?.text ||
-    obj?.data?.message?.content ||
-    obj?.data?.message?.text ||
-    obj?.payload?.message?.content ||
-    obj?.message?.text ||
-    obj?.message?.content ||
-    obj?.message?.body ||
-    // Inbound parsing
-    obj?.items?.[0]?.Text ||
-    obj?.items?.[0]?.text ||
-    obj?.content ||
     ''
   )
 
   // --- HTML ---
   const html = (
+    firstMsg?.html ||
     obj?.html ||
     obj?.data?.message?.html ||
     obj?.items?.[0]?.Html ||
-    obj?.items?.[0]?.html ||
     ''
+  )
+
+  // --- TEXT (strip HTML if no plain text available) ---
+  const text = (
+    firstMsg?.text ||
+    obj?.text ||
+    obj?.data?.text ||
+    obj?.data?.message?.content ||
+    obj?.items?.[0]?.Text ||
+    obj?.content ||
+    (html ? stripHtml(html) : '')
   )
 
   return {
