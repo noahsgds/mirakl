@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageSquare, ExternalLink, Phone, Trophy, XCircle, Mail, Linkedin, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Mail, Linkedin, ExternalLink, Phone, Trophy, XCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LeadDrawer from '../components/LeadDrawer'
 
@@ -9,154 +9,179 @@ const OUTCOME_OPTIONS = [
   { value: 'lost', label: 'Perdu', icon: XCircle, color: 'text-red-600 bg-red-50 border-red-200' },
 ]
 
-function fmt(ts) {
-  if (!ts) return '—'
-  return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+function cleanText(raw) {
+  if (!raw) return ''
+  return raw
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+    // Strip quoted reply thread — French & English patterns
+    .replace(/\s*Le (lun|mar|mer|jeu|ven|sam|dim)[\s\S]*/i, '')
+    .replace(/\s*On (Mon|Tue|Wed|Thu|Fri|Sat|Sun)[\s\S]*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-function MessageThread({ messages }) {
-  const [expanded, setExpanded] = useState(false)
-  if (!messages || messages.length === 0) return null
+function initials(name, email) {
+  if (name) {
+    const parts = name.trim().split(/\s+/)
+    return (parts[0]?.[0] || '') + (parts[1]?.[0] || parts[0]?.[1] || '')
+  }
+  return (email?.[0] || '?').toUpperCase()
+}
 
-  const sorted = [...messages].sort((a, b) => new Date(b.received_at) - new Date(a.received_at))
-  const latest = sorted[0]
-  const rest = sorted.slice(1)
+function fmtDate(ts) {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  if (sameDay) return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+}
 
+function Avatar({ name, email }) {
+  const text = initials(name, email).toUpperCase()
   return (
-    <div className="mt-3 rounded-lg border border-green-100 bg-green-50/50 overflow-hidden">
-      <div className="px-3 py-2.5">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-green-800">
-              {latest.from_name || latest.from_email}
-            </span>
-            {latest.subject && (
-              <span className="text-xs text-green-700 truncate max-w-[260px]">— {latest.subject}</span>
-            )}
-          </div>
-          <span className="text-xs text-muted flex-shrink-0">{fmt(latest.received_at)}</span>
-        </div>
-        {latest.text_content && (
-          <p className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-3">
-            {latest.text_content.trim()}
-          </p>
-        )}
-        {!latest.text_content && (
-          <p className="text-xs text-slate-400 italic">Notification de réception (pas de contenu)</p>
-        )}
-      </div>
+    <div className="w-10 h-10 rounded-full bg-[#1B3A5C] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+      {text}
+    </div>
+  )
+}
 
-      {rest.length > 0 && (
-        <>
-          <button
-            onClick={() => setExpanded(v => !v)}
-            className="w-full flex items-center justify-center gap-1 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100 border-t border-green-100 transition-colors"
-          >
-            {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {expanded ? 'Masquer' : `${rest.length} message${rest.length > 1 ? 's' : ''} précédent${rest.length > 1 ? 's' : ''}`}
-          </button>
-          {expanded && rest.map((msg) => (
-            <div key={msg.id} className="px-3 py-2.5 border-t border-green-100">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="text-xs font-semibold text-green-800">
-                  {msg.from_name || msg.from_email}
-                </span>
-                <span className="text-xs text-muted">{fmt(msg.received_at)}</span>
-              </div>
-              {msg.text_content && (
-                <p className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-2">
-                  {msg.text_content.trim()}
-                </p>
-              )}
-            </div>
-          ))}
-        </>
+function MessageBubble({ msg, isLatest }) {
+  const text = cleanText(msg.text_content)
+  if (!text && !msg.subject) return null
+  return (
+    <div className={`rounded-xl px-4 py-3 text-sm ${isLatest ? 'bg-[#F2F8FF] border border-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
+      {msg.subject && (
+        <p className="text-xs font-semibold text-slate-500 mb-1 truncate">{msg.subject}</p>
       )}
+      {text ? (
+        <p className="text-slate-800 whitespace-pre-wrap leading-relaxed">{text}</p>
+      ) : (
+        <p className="text-slate-400 italic text-xs">Notification de réception</p>
+      )}
+      <p className="text-xs text-slate-400 mt-2 text-right">{fmtDate(msg.received_at)}</p>
     </div>
   )
 }
 
 function ThreadCard({ thread, sellerMap, onAction, onOpen }) {
+  const [expanded, setExpanded] = useState(false)
   const [actioning, setActioning] = useState(false)
   const seller = sellerMap[thread.email] || null
-  const latest = thread.messages[0]
+  const sorted = [...thread.messages].sort((a, b) => new Date(b.received_at) - new Date(a.received_at))
+  const latest = sorted[0]
+  const older = sorted.slice(1).filter(m => cleanText(m.text_content) || m.subject)
+
+  const displayName = seller?.amazon_sellers?.seller_name
+    || latest.from_name
+    || thread.email
+
+  const latestText = cleanText(latest.text_content)
 
   async function handleOutcome(outcome) {
     if (!seller) return
     setActioning(true)
     await supabase
       .from('seller_qualification')
-      .update({ statut: outcome === 'won' ? 'REPLIED' : seller.statut, notes: outcome })
+      .update({ statut: outcome === 'won' ? 'REPLIED' : seller.statut })
       .eq('seller_id', seller.seller_id)
     onAction?.()
     setActioning(false)
   }
 
   return (
-    <div className="card hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-4">
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+      {/* Header */}
+      <div className="flex items-start gap-3 px-5 py-4">
+        <Avatar name={latest.from_name} email={thread.email} />
+
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            {seller ? (
-              <button
-                onClick={() => onOpen(seller.seller_id)}
-                className="font-semibold text-text hover:text-[#1B3A5C] hover:underline text-left"
-              >
-                {seller.amazon_sellers?.seller_name || seller.decision_maker_name || thread.email}
-              </button>
-            ) : (
-              <span className="font-semibold text-text">
-                {latest.from_name || thread.email}
-              </span>
-            )}
-            {seller?.amazon_sellers?.seller_url && (
-              <a href={seller.amazon_sellers.seller_url} target="_blank" rel="noreferrer" className="text-muted hover:text-[#1B3A5C]">
-                <ExternalLink size={13} />
-              </a>
-            )}
-            {seller?.amazon_sellers?.categories && (
-              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                {seller.amazon_sellers.categories}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 mt-2 flex-wrap">
-            <a href={`mailto:${thread.email}`} className="flex items-center gap-1 text-xs text-[#1B3A5C] hover:underline">
-              <Mail size={12} /> {thread.email}
-            </a>
-            {seller?.decision_maker_linkedin && (
-              <a href={seller.decision_maker_linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                <Linkedin size={12} /> LinkedIn
-              </a>
-            )}
-            <span className="text-xs text-muted">
-              {thread.messages.length} message{thread.messages.length > 1 ? 's' : ''}
-            </span>
-          </div>
-
-          <MessageThread messages={thread.messages} />
-        </div>
-
-        <div className="text-right flex-shrink-0">
-          {seller?.score_total != null && (
-            <div className={`text-lg font-bold mb-1 ${seller.score_total >= 70 ? 'text-green-600' : seller.score_total >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
-              {seller.score_total}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              {seller ? (
+                <button
+                  onClick={() => onOpen(seller.seller_id)}
+                  className="font-bold text-[#03182F] hover:text-[#1B3A5C] hover:underline text-base leading-tight text-left"
+                >
+                  {displayName}
+                </button>
+              ) : (
+                <span className="font-bold text-[#03182F] text-base leading-tight">{displayName}</span>
+              )}
+              {seller?.amazon_sellers?.categories && (
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
+                  {seller.amazon_sellers.categories}
+                </span>
+              )}
+              {seller?.score_total != null && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${seller.score_total >= 70 ? 'bg-green-100 text-green-700' : seller.score_total >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
+                  {seller.score_total}/100
+                </span>
+              )}
             </div>
-          )}
-          <p className="text-xs text-muted">{fmt(latest.received_at)}</p>
+            <span className="text-xs text-slate-400 flex-shrink-0 font-medium">{fmtDate(latest.received_at)}</span>
+          </div>
+
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <a href={`mailto:${thread.email}`} className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#1B3A5C] transition-colors">
+              <Mail size={11} /> {thread.email}
+            </a>
+            {seller?.amazon_sellers?.seller_url && (
+              <a href={seller.amazon_sellers.seller_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-slate-400 hover:text-[#1B3A5C] transition-colors">
+                <ExternalLink size={11} /> Amazon
+              </a>
+            )}
+            {seller?.decision_maker_linkedin && (
+              <a href={seller.decision_maker_linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition-colors">
+                <Linkedin size={11} /> LinkedIn
+              </a>
+            )}
+            {sorted.length > 1 && (
+              <span className="text-xs text-slate-400">{sorted.length} messages</span>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Latest message */}
+      <div className="px-5 pb-4">
+        <MessageBubble msg={latest} isLatest />
+      </div>
+
+      {/* Older messages (collapsible) */}
+      {older.length > 0 && (
+        <div className="border-t border-gray-100">
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs text-slate-500 hover:bg-gray-50 transition-colors font-medium"
+          >
+            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            {expanded ? 'Masquer' : `${older.length} message${older.length > 1 ? 's' : ''} précédent${older.length > 1 ? 's' : ''}`}
+          </button>
+          {expanded && (
+            <div className="px-5 pb-4 space-y-2">
+              {older.map(msg => <MessageBubble key={msg.id} msg={msg} isLatest={false} />)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
       {seller && (
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 flex-wrap">
-          <p className="text-xs text-muted font-medium mr-1">Action :</p>
+        <div className="flex items-center gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50/60 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium mr-1">Action :</span>
           {OUTCOME_OPTIONS.map(({ value, label, icon: Icon, color }) => (
             <button
               key={value}
               onClick={() => handleOutcome(value)}
               disabled={actioning}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 ${color}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${color}`}
             >
               {actioning ? <RefreshCw size={11} className="animate-spin" /> : <Icon size={11} />}
               {label}
@@ -164,7 +189,7 @@ function ThreadCard({ thread, sellerMap, onAction, onOpen }) {
           ))}
           <button
             onClick={() => onOpen(seller.seller_id)}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1B3A5C] text-white hover:bg-[#15304e] transition-colors"
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1B3A5C] text-white hover:bg-[#15304e] transition-colors"
           >
             Voir fiche →
           </button>
@@ -183,7 +208,6 @@ export default function Inbox() {
   async function load() {
     setLoading(true)
 
-    // 1. All messages from brevo_messages
     const { data: msgs } = await supabase
       .from('brevo_messages')
       .select('id, received_at, from_email, from_name, subject, text_content, seller_id')
@@ -195,7 +219,7 @@ export default function Inbox() {
       return
     }
 
-    // 2. Group by sender email → one thread per sender
+    // Group by sender email
     const grouped = {}
     for (const msg of msgs) {
       const key = (msg.from_email || '').toLowerCase()
@@ -204,19 +228,15 @@ export default function Inbox() {
       grouped[key].push(msg)
     }
 
-    const threadList = Object.entries(grouped).map(([email, messages]) => ({
-      email,
-      messages,
-    }))
-
+    const threadList = Object.entries(grouped).map(([email, messages]) => ({ email, messages }))
     setThreads(threadList)
 
-    // 3. Try to load seller info for each sender email
+    // Load seller info by email
     const emails = threadList.map(t => t.email)
     if (emails.length > 0) {
       const { data: sellers } = await supabase
         .from('seller_qualification')
-        .select('seller_id, decision_maker_email, decision_maker_name, decision_maker_linkedin, statut, score_total, amazon_sellers(seller_name, seller_url, categories), seller_sequence(opened_count, clicked_count, mail1_sent_at)')
+        .select('seller_id, decision_maker_email, decision_maker_name, decision_maker_linkedin, statut, score_total, amazon_sellers(seller_name, seller_url, categories)')
         .in('decision_maker_email', emails)
 
       const map = {}
@@ -240,35 +260,29 @@ export default function Inbox() {
   }, [])
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-text">Inbox</h1>
-        <p className="text-muted text-sm mt-0.5">Réponses reçues des sellers via Brevo</p>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border-2 bg-green-50 border-green-200 text-green-700">
-          <MessageSquare size={16} />
-          Replies
-          {threads.length > 0 && (
-            <span className="ml-1 bg-green-200 text-green-800 text-xs px-1.5 py-0.5 rounded-full font-bold">
-              {threads.length}
-            </span>
-          )}
+    <div className="space-y-5">
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#03182F]">Inbox</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Réponses reçues des sellers via Brevo</p>
         </div>
+        {threads.length > 0 && (
+          <span className="text-sm font-semibold text-slate-600">
+            {threads.length} conversation{threads.length > 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-muted">Chargement...</div>
+        <div className="flex items-center justify-center h-48 text-slate-400">Chargement...</div>
       ) : threads.length === 0 ? (
-        <div className="card py-16 text-center">
-          <div className="text-4xl mb-3">💬</div>
-          <p className="text-muted">Aucune réponse reçue pour le moment</p>
-          <p className="text-xs text-muted mt-1">Les réponses Brevo apparaîtront ici automatiquement</p>
+        <div className="bg-white rounded-2xl border border-gray-200 py-20 text-center">
+          <div className="text-5xl mb-4">💬</div>
+          <p className="font-semibold text-slate-700">Aucune réponse reçue</p>
+          <p className="text-sm text-slate-400 mt-1">Les réponses Brevo apparaîtront ici automatiquement</p>
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-sm text-muted">{threads.length} conversation{threads.length > 1 ? 's' : ''}</p>
           {threads.map((thread) => (
             <ThreadCard
               key={thread.email}

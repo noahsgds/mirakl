@@ -23,7 +23,26 @@ const SUPABASE_SERVICE_ROLE_KEY =
 // ---------------------------------------------------------------------------
 
 function stripHtml(html) {
-  return String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return String(html || '')
+    // Drop blockquotes (quoted previous emails in reply threads)
+    .replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    // Strip remaining tags
+    .replace(/<[^>]*>/g, ' ')
+    // Decode HTML entities
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(Number(c)))
+    // Strip quoted-reply line "Le lun. 23 avr. … a écrit :" and everything after
+    .replace(/\s*Le (lun|mar|mer|jeu|ven|sam|dim)[\s\S]*/i, '')
+    .replace(/\s*On (Mon|Tue|Wed|Thu|Fri|Sat|Sun)[\s\S]*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function getVisitorMessage(event) {
