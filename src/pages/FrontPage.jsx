@@ -28,6 +28,16 @@ export function Hero() {
     <section id="home" className="relative min-h-[100dvh] w-full overflow-hidden">
       <LiquidGlassFilter />
       <BackgroundSnippets />
+      <div className="relative z-20 mx-auto w-full max-w-[1280px] px-4 pt-4 sm:px-6 md:px-8">
+        <div className="rounded-xl border border-red-200 bg-red-600 px-4 py-2 text-center text-white shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] sm:text-sm">
+            Mirakl x Eugenia Hackathon Project (fictional data)
+          </p>
+          <p className="mt-0.5 text-[11px] font-medium text-red-50 sm:text-xs">
+            Prototype for demonstration purposes only. Not production or live commercial data.
+          </p>
+        </div>
+      </div>
       <div className={`relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-4 py-6 text-center sm:px-6 md:px-8 ${reduceMotion ? "" : "animation-delay-8 animate-fadeIn"}`}>
         <img
           src="/images/logo-mirakl.png"
