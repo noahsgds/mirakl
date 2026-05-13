@@ -11,11 +11,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "experimentalServices": {
-    "runner": {
-      "entrypoint": "runner",
-      "routePrefix": "/runner"
-    }
-  }
+  ]
 }
